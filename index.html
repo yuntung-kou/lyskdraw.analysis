@@ -113,28 +113,28 @@
     </div>
 
     <div class="form-group">
-        <label class="group-label">1. 卡池名稱與當期思念</label>
-        <div style="display: flex; gap: 10px;">
-            <input type="text" id="bannerName" placeholder="卡池名稱" style="flex: 1;" list="bannerList" onchange="autoFillBannerInfo()">
-            <input type="text" id="upCardName" placeholder="以卡名尋找卡池 🔍" style="flex: 1;" list="allCardsList" onchange="autoFillFromUpCard()">
+        <label class="group-label">1. 卡池種類</label>
+        <div style="display: flex; gap: 10px; margin-top: 4px;">
+            <div class="radio-group" style="margin-top: 0;">
+                <label class="radio-label"><input type="radio" name="mainPool" value="限定" checked onchange="onPoolChange()"> 💠 限定</label>
+                <label class="radio-label"><input type="radio" name="mainPool" value="復刻" onchange="onPoolChange()"> 🔄 復刻</label>
+            </div>
+            <div class="radio-group" style="margin-top: 0;">
+                <label class="radio-label"><input type="radio" name="subPool" value="單人" checked onchange="onPoolChange()"> 👤 單人</label>
+                <label class="radio-label"><input type="radio" name="subPool" value="日卡" onchange="onPoolChange()"> ☀️ 日卡</label>
+                <label class="radio-label"><input type="radio" name="subPool" value="混池" onchange="onPoolChange()"> 👥 混池</label>
+            </div>
         </div>
-        <datalist id="bannerList"></datalist>
-        <datalist id="allCardsList"></datalist>
     </div>
 
     <div class="form-group">
-        <label class="group-label">2. 卡池種類</label>
-        <div style="display: flex; gap: 10px; margin-top: 4px;">
-            <div class="radio-group" style="margin-top: 0;">
-                <label class="radio-label"><input type="radio" name="mainPool" value="限定" checked onchange="updatePulledCardList()"> 💠 限定</label>
-                <label class="radio-label"><input type="radio" name="mainPool" value="復刻" onchange="updatePulledCardList()"> 🔄 復刻</label>
-            </div>
-            <div class="radio-group" style="margin-top: 0;">
-                <label class="radio-label"><input type="radio" name="subPool" value="單人" checked onchange="updatePulledCardList()"> 👤 單人</label>
-                <label class="radio-label"><input type="radio" name="subPool" value="日卡" onchange="updatePulledCardList()"> ☀️ 日卡</label>
-                <label class="radio-label"><input type="radio" name="subPool" value="混池" onchange="updatePulledCardList()"> 👥 混池</label>
-            </div>
+        <label class="group-label">2. 卡池名稱與當期思念</label>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="bannerName" placeholder="點此選擇卡池" style="flex: 1;" list="bannerList" onchange="autoFillBannerInfo()">
+            <input type="text" id="upCardName" placeholder="以卡名反查卡池 🔍" style="flex: 1;" list="allCardsList" onchange="autoFillFromUpCard()">
         </div>
+        <datalist id="bannerList"></datalist>
+        <datalist id="allCardsList"></datalist>
     </div>
 
     <div class="form-group">
@@ -180,7 +180,6 @@
 <script>
     const leadIcons = {'祁煜':'🐟', '沈星回':'🌟', '黎深':'🍐', '秦徹':'🚘', '夏以晝':'🍎'};
 
-    // 主推設定
     function toggleOshiEdit() {
         const group = document.getElementById('oshiGroup');
         const btn = document.getElementById('oshiToggleBtn');
@@ -215,26 +214,15 @@
         updateOshiSummary();
     }
 
-    // 初始化下拉清單
     function initEventData() {
         if (typeof eventCards === 'undefined') return;
-        const bannerList = document.getElementById('bannerList');
         const allCardsList = document.getElementById('allCardsList');
-        
-        let allBanners = new Set();
         let allCards = new Set();
 
         eventCards.forEach(e => {
-            allBanners.add(e.eventName);
             Object.values(e.cards).forEach(cards => {
                 cards.forEach(c => allCards.add(c));
             });
-        });
-
-        allBanners.forEach(b => {
-            const opt = document.createElement('option');
-            opt.value = b;
-            bannerList.appendChild(opt);
         });
 
         allCards.forEach(c => {
@@ -243,10 +231,47 @@
             allCardsList.appendChild(opt);
         });
 
-        updatePulledCardList(); // 初始載入智慧連動卡單
+        onPoolChange(); 
     }
 
-    // 卡名反查卡池
+    function updateBannerRecommendations() {
+        if (typeof eventCards === 'undefined') return;
+        
+        const mainPool = document.querySelector('input[name="mainPool"]:checked').value;
+        const subPool = document.querySelector('input[name="subPool"]:checked').value;
+        const bannerList = document.getElementById('bannerList');
+        
+        bannerList.innerHTML = '';
+        let filteredBanners = new Set();
+        
+        eventCards.forEach(e => {
+            const isRerun = e.poolType.includes('復刻');
+            
+            if (mainPool === '限定' && isRerun) return;
+            if (mainPool === '復刻' && !isRerun) return;
+            
+            let matchSub = false;
+            if (subPool === '混池' && e.poolType.includes('混池')) matchSub = true;
+            if (subPool === '日卡' && e.poolType.includes('日卡')) matchSub = true;
+            if (subPool === '單人' && (e.poolType.includes('單人') || e.poolType.includes('生日') || e.poolType.includes('免五') || e.poolType === '復刻')) matchSub = true;
+            
+            if (matchSub) {
+                filteredBanners.add(e.eventName);
+            }
+        });
+        
+        filteredBanners.forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b;
+            bannerList.appendChild(opt);
+        });
+    }
+
+    function onPoolChange() {
+        updateBannerRecommendations(); 
+        updatePulledCardList();        
+    }
+
     function autoFillFromUpCard() {
         const upCardName = document.getElementById('upCardName').value;
         if (!upCardName || typeof eventCards === 'undefined') return;
@@ -257,11 +282,10 @@
         
         if (event) {
             document.getElementById('bannerName').value = event.eventName;
-            autoFillBannerInfo();
+            autoFillBannerInfo(); 
         }
     }
 
-    // 卡池連動設定
     function autoFillBannerInfo() {
         const bannerName = document.getElementById('bannerName').value;
         if (typeof eventCards === 'undefined') return;
@@ -274,7 +298,6 @@
             else if(event.poolType.includes('日卡')) document.querySelector('input[name="subPool"][value="日卡"]').checked = true;
             else document.querySelector('input[name="subPool"][value="單人"]').checked = true;
 
-            // 如果 UP 欄位是空的，自動幫忙補上其中一張當期卡名
             const upInput = document.getElementById('upCardName');
             let validCards = [];
             Object.values(event.cards).forEach(arr => validCards.push(...arr));
@@ -282,10 +305,10 @@
                 upInput.value = validCards[0] || '';
             }
         }
-        updatePulledCardList();
+        onPoolChange();
     }
 
-    // 智慧連動抽卡選單 (常駐/混池限定)
+    // 🏆 核心優化：更新獲得男主卡名，限定卡優先顯示
     function updatePulledCardList() {
         const bannerName = document.getElementById('bannerName').value;
         const pulledLead = document.querySelector('input[name="pulledLead"]:checked').value;
@@ -294,17 +317,17 @@
         
         let options = new Set();
         
-        // 加入該男主的常駐卡
-        if (typeof standardCards !== 'undefined' && standardCards[pulledLead]) {
-            standardCards[pulledLead].forEach(c => options.add(c));
-        }
-        
-        // 若此卡池中，該男主有出限定卡，一併加入清單 (混池歪到其他UP的情況)
+        // 1. 先加入該卡池的限定卡 (排在最前面)
         if (bannerName && typeof eventCards !== 'undefined') {
             const event = eventCards.find(e => e.eventName === bannerName);
             if (event && event.cards[pulledLead]) {
                 event.cards[pulledLead].forEach(c => options.add(c));
             }
+        }
+
+        // 2. 再加入常駐卡 (排在後面)
+        if (typeof standardCards !== 'undefined' && standardCards[pulledLead]) {
+            standardCards[pulledLead].forEach(c => options.add(c));
         }
         
         options.forEach(c => {
@@ -314,7 +337,6 @@
         });
     }
 
-    // 取得時間戳供排序
     function getEventDate(eventName, mainPool) {
         if (typeof eventCards === 'undefined') return 0;
         const matches = eventCards.filter(e => e.eventName === eventName);
@@ -337,7 +359,6 @@
         }
     }
 
-    // 抽卡評分
     const judgeS = (p) => {
         if (p <= 7) return {t:"天選之子 ✨", c:"#16a34a", s:2};
         if (p <= 24) return {t:"幸運兒 🌟", c:"#4ade80", s:1};
@@ -416,7 +437,6 @@
         }
     }
 
-    // 畫面渲染
     function renderUI() {
         document.getElementById('pLim').innerText = getP('lim');
         document.getElementById('pRe').innerText = getP('re');
@@ -424,7 +444,6 @@
         let db = JSON.parse(localStorage.getItem('db_v4')) || [];
         const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
 
-        // 日期排序
         db.forEach(r => {
             const evTime = getEventDate(r.banner, r.main);
             r._sortTime = evTime ? evTime : r.id; 
@@ -432,7 +451,6 @@
         });
         db.sort((a, b) => b._sortTime - a._sortTime || b._entryOrder - a._entryOrder);
 
-        // 體質面板
         const calcOverall = (filter) => {
             const items = db.filter(r => r.main === filter && r.res === 'target'); 
             if (!items.length) return "---";
@@ -446,7 +464,6 @@
         document.getElementById('luckLim').innerHTML = `<h5>限定池體質</h5>${calcOverall('限定')}`;
         document.getElementById('luckRe').innerHTML = `<h5>復刻池體質</h5>${calcOverall('復刻')}`;
 
-        // 巔峰榜
         let peakHTML = '';
         if (db.length > 0) {
             const targets = db.filter(r => r.res === 'target');
@@ -473,7 +490,6 @@
             document.getElementById('peakBoard').innerHTML = `<div style="text-align:center;font-size:12px;color:#94a3b8">尚無資料</div>`;
         }
 
-        // 長條圖
         const chart = document.getElementById('chartContainer');
         chart.innerHTML = '';
         [...db].reverse().forEach(r => {
@@ -491,7 +507,6 @@
             chart.appendChild(wrap);
         });
 
-        // 歷史清單
         document.getElementById('recordList').innerHTML = db.map(r => {
             const icon = leadIcons[r.lead] || '';
             const isOshi = oshis.includes(r.lead);
