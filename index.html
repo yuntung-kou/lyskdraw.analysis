@@ -14,13 +14,11 @@
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; display: flex; justify-content: center; }
         .container { max-width: 600px; width: 100%; display: flex; flex-direction: column; gap: 15px; }
         
-        /* 統一的區塊外觀 (對應你的手繪圖) */
         .block { background-color: var(--card-bg); padding: 20px; border-radius: 12px; border: 2px solid #3b82f6; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         
         h1 { text-align: center; color: #1e40af; margin: 0; font-size: 22px; }
         h3 { margin-top: 0; margin-bottom: 15px; font-size: 16px; color: #1d4ed8; border-bottom: 2px solid #bfdbfe; padding-bottom: 5px;}
         
-        /* 表單元素 */
         .form-group { margin-bottom: 15px; }
         label.group-label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: bold; color: #334155; }
         input[type="text"], input[type="number"] { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; font-size: 14px; }
@@ -34,20 +32,17 @@
         .btn-submit { width: 100%; padding: 12px; background-color: var(--primary); color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 5px;}
         .btn-submit:hover { background-color: var(--primary-hover); }
 
-        /* 統計區塊 */
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
         .stat-box { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px; border-radius: 6px; text-align: center; }
         .stat-box h5 { margin: 0 0 5px 0; font-size: 12px; color: var(--text-sub); }
         .stat-box-bad { background: #fef2f2; border-color: #fecaca; }
         
-        /* 稱號顏色設定 */
-        .title-god { color: #16a34a; font-weight: bold; } /* 天選之子 */
-        .title-lucky { color: #4ade80; } /* 幸運兒 */
-        .title-plain { color: #ca8a04; } /* 平凡人 */
-        .title-unlucky { color: #ea580c; } /* 小不幸運 */
-        .title-bad { color: #dc2626; font-weight: bold;} /* 小倒霉鬼 */
+        .title-god { color: #16a34a; font-weight: bold; } 
+        .title-lucky { color: #4ade80; } 
+        .title-plain { color: #ca8a04; } 
+        .title-unlucky { color: #ea580c; } 
+        .title-bad { color: #dc2626; font-weight: bold;} 
 
-        /* 長條圖 */
         .chart-container { display: flex; align-items: flex-end; gap: 8px; height: 180px; padding: 25px 5px 5px 5px; overflow-x: auto; background-color: #f8fafc; border-radius: 6px; border: 1px solid var(--border); }
         .bar-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-width: 40px; height: 100%; }
         .wai-circle { width: 18px; height: 18px; border-radius: 50%; color: white; font-size: 8px; display: flex; justify-content: center; align-items: center; margin-bottom: 4px; font-weight: bold; }
@@ -56,7 +51,6 @@
         .bar-fill { width: 25px; border-radius: 4px 4px 0 0; }
         .bar-label { font-size: 9px; color: var(--text-sub); margin-top: 6px; max-width: 40px; overflow: hidden; text-align: center; white-space: nowrap;}
 
-        /* 歷史紀錄 */
         .record-card { background-color: #f8fafc; border: 1px solid var(--border); padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
         .record-info h4 { margin: 0 0 6px 0; font-size: 14px; color: #1e293b;} 
         .record-info p { margin: 0; font-size: 12px; color: var(--text-sub); }
@@ -140,7 +134,7 @@
     </div>
 
     <div class="block">
-        <h3>📊 抽卡歷程圖</h3>
+        <h3>📊 抽卡歷程圖 (按時間順序)</h3>
         <div id="chartContainer" class="chart-container"></div>
     </div>
 
@@ -154,11 +148,11 @@
 </div>
 
 <script src="love_and_deepspace_events.js"></script>
+<script src="love_and_deepspace_standard.js"></script>
 
 <script>
     const leadIcons = {'祁煜':'🐟', '沈星回':'🌟', '黎深':'🍐', '秦徹':'🚘', '夏以晝':'🍎'};
 
-    // 1. 初始化資料庫至下拉選單
     function initEventData() {
         if (typeof eventCards === 'undefined') return alert("找不到資料庫！請確認 love_and_deepspace_events.js 檔案存在。");
         const datalist = document.getElementById('bannerList');
@@ -170,26 +164,22 @@
         });
     }
 
-    // 2. 自動帶入卡池資訊 (當選擇卡池名稱時)
     function autoFillBannerInfo() {
         const bannerName = document.getElementById('bannerName').value;
         const event = eventCards.find(e => e.eventName === bannerName);
         if (event) {
-            // 自動判斷大類 (如果名稱有復刻，或是使用者自己判斷，這邊做個簡單處理)
             if(event.poolType.includes('復刻')) {
                 document.querySelector('input[name="mainPool"][value="復刻"]').checked = true;
             } else {
                 document.querySelector('input[name="mainPool"][value="限定"]').checked = true;
             }
 
-            // 自動判斷細項
             if(event.poolType.includes('混池')) document.querySelector('input[name="subPool"][value="混池"]').checked = true;
             else if(event.poolType.includes('日卡')) document.querySelector('input[name="subPool"][value="日卡"]').checked = true;
             else document.querySelector('input[name="subPool"][value="單人"]').checked = true;
         }
     }
 
-    // 3. 自推存取
     function saveOshis() {
         const oshis = Array.from(document.querySelectorAll('input[name="oshi"]:checked')).map(cb => cb.value);
         localStorage.setItem('oshis', JSON.stringify(oshis));
@@ -201,7 +191,6 @@
         document.querySelectorAll('input[name="oshi"]').forEach(cb => cb.checked = oshis.includes(cb.value));
     }
 
-    // 4. 新版評分系統 (採用自訂的五個分類)
     const judgeS = (p) => {
         if (p <= 7) return {t:"天選之子", c:"#16a34a", s:2};
         if (p <= 24) return {t:"幸運兒", c:"#4ade80", s:1};
@@ -210,7 +199,6 @@
         return {t:"小倒霉鬼", c:"#dc2626", s:-2};
     };
 
-    // 歪卡後大保底的評分
     const judgeT = (p) => {
         if (p <= 26) return {t:"天選之子", c:"#16a34a", s:2}; 
         if (p <= 65) return {t:"幸運兒", c:"#4ade80", s:1};
@@ -219,11 +207,9 @@
         return {t:"小倒霉鬼", c:"#dc2626", s:-2};
     };
 
-    // 墊池變數管理
     const getP = (type) => parseInt(localStorage.getItem('p_' + type)) || 0;
     const setP = (type, v) => localStorage.setItem('p_' + type, v);
 
-    // 5. 核心：新增紀錄與自動判斷歪卡
     function addRecord() {
         const banner = document.getElementById('bannerName').value.trim();
         const main = document.querySelector('input[name="mainPool"]:checked').value;
@@ -238,14 +224,11 @@
         const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
         const event = typeof eventCards !== 'undefined' ? eventCards.find(e => e.eventName === banner) : null;
         
-        let judgeResult = 'wai'; // 預設為歪
+        let judgeResult = 'wai'; 
         
-        // 核心判斷邏輯
         if (event && event.cards[pulledLead] && (!card || event.cards[pulledLead].includes(card))) {
-            // 卡池中有這位男主，且卡名相符 (或沒填卡名但男主對了)，視為目標達成！
             judgeResult = 'target';
         } else if (oshis.includes(pulledLead)) {
-            // 歪了，但是是自推！
             judgeResult = 'oshi_spook';
         }
 
@@ -255,20 +238,19 @@
         let rec = { id: Date.now(), main, sub, lead: pulledLead, banner, card, pulls, res: judgeResult };
         
         if (judgeResult === 'target') {
-            rec.total = currentP + pulls; // 加上之前墊的
+            rec.total = currentP + pulls; 
             rec.luck = judgeT(rec.total);
-            setP(poolKey, 0); // 清空墊池
+            setP(poolKey, 0); 
         } else {
             rec.total = pulls;
             rec.luck = judgeS(pulls);
-            setP(poolKey, currentP + pulls); // 累加墊池
+            setP(poolKey, currentP + pulls); 
         }
 
         let db = JSON.parse(localStorage.getItem('db_v3')) || [];
-        db.unshift(rec);
+        db.push(rec); // 注意這裡改成 push，為了後面精準的日期排序
         localStorage.setItem('db_v3', JSON.stringify(db));
         
-        // 清空表單
         document.getElementById('cardName').value = '';
         document.getElementById('pulls').value = '';
         renderUI();
@@ -283,11 +265,48 @@
         }
     }
 
-    // 6. 渲染畫面 (看板、長條圖、列表)
+    // --- 核心更新：根據卡池與限定/復刻精準取得發布時間 ---
+    function getEventDate(eventName, mainPool) {
+        if (typeof eventCards === 'undefined') return 0;
+        const matches = eventCards.filter(e => e.eventName === eventName);
+        if (matches.length === 0) return 0;
+
+        let target = matches[0];
+        if (matches.length > 1) {
+            // 同名卡池：如果是復刻，找帶有「復刻」字眼的紀錄；如果是限定，找沒有的。
+            if (mainPool === '復刻') {
+                target = matches.find(e => e.poolType.includes('復刻')) || matches[matches.length - 1];
+            } else {
+                target = matches.find(e => !e.poolType.includes('復刻')) || matches[0];
+            }
+        }
+
+        try {
+            const startStr = target.duration.split('-')[0]; // 取出 "3.11"
+            const [m, d] = startStr.split('.');
+            if (!m || !d) return 0;
+            // 轉換成真實的 Date 格式以便計算排序
+            const dateStr = `${target.year}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T00:00:00`;
+            return new Date(dateStr).getTime();
+        } catch(e) {
+            return 0; // 無法計算則墊底
+        }
+    }
+
     function renderUI() {
-        const db = JSON.parse(localStorage.getItem('db_v3')) || [];
+        let db = JSON.parse(localStorage.getItem('db_v3')) || [];
         
-        // 計算運氣平均
+        // 賦予每筆紀錄一個隱藏的「排序專用時間」
+        db.forEach(r => {
+            const evTime = getEventDate(r.banner, r.main);
+            // 如果能取得官方卡池時間就用官方時間，否則用當時輸入的時間
+            r._sortTime = evTime ? evTime : r.id; 
+            r._entryOrder = r.id; // 保留登錄時的順序，以防同一天抽好幾次
+        });
+
+        // 將陣列進行年代排序 (最新 -> 最舊)
+        db.sort((a, b) => b._sortTime - a._sortTime || b._entryOrder - a._entryOrder);
+        
         const calcOverall = (filter) => {
             const items = db.filter(r => r.main === filter && r.res === 'target'); 
             if (!items.length) return "---";
@@ -301,7 +320,6 @@
         document.getElementById('luckLim').innerHTML = `<h5>💠 限時池運氣</h5>${calcOverall('限定')}`;
         document.getElementById('luckRe').innerHTML = `<h5>🔄 復刻池運氣</h5>${calcOverall('復刻')}`;
 
-        // 找最歐卡池
         const targets = db.filter(r => r.res === 'target');
         if(targets.length > 0){
             const best = targets.sort((a,b) => a.total - b.total)[0];
@@ -310,7 +328,6 @@
             document.getElementById('bestBanner').innerHTML = `<h5>🏆 最歐卡池</h5>---`;
         }
 
-        // 找最常歪誰
         const waiRecords = db.filter(r => r.res === 'wai');
         if (waiRecords.length > 0) {
             let counts = {};
@@ -321,7 +338,7 @@
             document.getElementById('worstSpook').innerHTML = `<h5>💔 最常歪誰</h5>---`;
         }
 
-        // 繪製長條圖
+        // 長條圖渲染 (這裡我們將剛剛降序排好的陣列翻轉，讓畫面從左(最古老)長到右(最新))
         const chart = document.getElementById('chartContainer');
         chart.innerHTML = '';
         [...db].reverse().forEach(r => {
@@ -339,7 +356,7 @@
             chart.appendChild(wrap);
         });
 
-        // 歷史清單
+        // 歷史清單渲染 (從最新到最舊往下排列)
         document.getElementById('recordList').innerHTML = db.map(r => {
             let statusText = '當期 UP'; let tagClass = 'tag-target';
             if(r.res === 'wai') { statusText = '歪卡'; tagClass = 'tag-wai'; }
@@ -348,10 +365,13 @@
             const leadStr = `${leadIcons[r.lead]} ${r.lead}`;
             const cardDisplay = r.card ? ` | ${r.card}` : '';
 
+            // 附上卡池所屬的年份與月份作為提示
+            const dateTip = r._sortTime !== r.id ? `<span style="font-size:10px; color:#94a3b8; margin-right:5px;">[${new Date(r._sortTime).getFullYear()}/${(new Date(r._sortTime).getMonth()+1).toString().padStart(2,'0')}]</span>` : '';
+
             return `
             <div class="record-card">
                 <div class="record-info">
-                    <h4><span class="tag ${tagClass}">${statusText}</span> ${r.banner}</h4>
+                    <h4><span class="tag ${tagClass}">${statusText}</span> ${dateTip}${r.banner}</h4>
                     <p>${leadStr}${cardDisplay} | <b>${r.pulls}抽</b> ${r.res==='target' ? '(含墊池 '+r.total+' 抽)' : ''}</p>
                 </div>
                 <div style="text-align:right;">
@@ -372,7 +392,6 @@
         } 
     }
     
-    // 初始化啟動
     loadOshis();
     initEventData();
     renderUI();
