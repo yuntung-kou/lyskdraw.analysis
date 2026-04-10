@@ -6,427 +6,375 @@
     <title>戀與深空 | 抽卡紀錄分析器</title>
     <style>
         :root {
-            --bg-color: #0f172a; --card-bg: #1e293b; --primary: #8b5cf6;
-            --primary-hover: #7c3aed; --text-main: #f8fafc; --text-sub: #cbd5e1;
-            --border: #334155; --limited-color: #3b82f6; --rerun-color: #ec4899;
-            --oshi-color: #ec4899; 
+            --bg-color: #f8fafc; --card-bg: #ffffff; --primary: #6366f1;
+            --primary-hover: #4f46e5; --text-main: #1e293b; --text-sub: #64748b;
+            --border: #cbd5e1; --oshi-color: #ec4899; 
         }
 
-        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 15px; display: flex; justify-content: center; }
-        .container { max-width: 600px; width: 100%; background-color: var(--card-bg); padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid var(--border); }
-        h1 { text-align: center; color: #c4b5fd; margin-bottom: 5px; font-size: 22px; }
-        p.subtitle { text-align: center; color: var(--text-sub); font-size: 13px; margin-bottom: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { max-width: 600px; width: 100%; display: flex; flex-direction: column; gap: 15px; }
         
-        /* 墊池面板 */
-        .pending-board { display: flex; justify-content: space-between; background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; font-size: 12px; font-weight: bold; }
-        .pending-item { cursor: pointer; padding: 4px; border-radius: 6px; transition: 0.2s; flex: 1; text-align: center;}
-        .pending-item:hover { background: rgba(255,255,255,0.05); }
-        .pending-item span { font-size: 15px; color: white; display: block; margin-top: 3px;}
-        .pending-lim { color: var(--limited-color); border-right: 1px solid var(--border); } .pending-re { color: var(--rerun-color); }
-
-        /* 表單樣式 */
-        .form-group { margin-bottom: 16px; }
-        label.group-label { display: block; margin-bottom: 6px; font-size: 13px; color: #e2e8f0; font-weight: bold; }
+        /* 統一的區塊外觀 (對應你的手繪圖) */
+        .block { background-color: var(--card-bg); padding: 20px; border-radius: 12px; border: 2px solid #3b82f6; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         
-        input[type="text"], input[type="number"] { width: 100%; padding: 10px; background-color: #0f172a; border: 1px solid var(--border); color: white; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
+        h1 { text-align: center; color: #1e40af; margin: 0; font-size: 22px; }
+        h3 { margin-top: 0; margin-bottom: 15px; font-size: 16px; color: #1d4ed8; border-bottom: 2px solid #bfdbfe; padding-bottom: 5px;}
         
-        /* 隱藏預設的 datalist 下拉箭頭，讓介面更乾淨 */
+        /* 表單元素 */
+        .form-group { margin-bottom: 15px; }
+        label.group-label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: bold; color: #334155; }
+        input[type="text"], input[type="number"] { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; font-size: 14px; }
         input::-webkit-calendar-picker-indicator { display: none !important; }
         
-        .radio-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-        .radio-label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; background: #0f172a; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); transition: 0.2s;}
-        .radio-label:hover { border-color: #6366f1; background: rgba(99, 102, 241, 0.1); }
-        
-        input[type="radio"], input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var(--primary); cursor: pointer; }
-        
-        .oshi-label input[type="checkbox"] { accent-color: var(--oshi-color); }
-        .oshi-label:hover { border-color: var(--oshi-color); background: rgba(236, 72, 153, 0.1); }
+        .radio-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+        .radio-label { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 14px; background: #f1f5f9; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); transition: 0.2s;}
+        .radio-label:hover { border-color: var(--primary); background: #e0e7ff; }
+        input[type="radio"], input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
 
-        .main-btn { width: 100%; padding: 12px; background-color: var(--primary); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
-        .main-btn:hover { background-color: var(--primary-hover); }
-        
-        /* 統計面板 */
-        .section-header { font-size: 16px; border-bottom: 2px solid var(--border); padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; margin-top: 25px; }
-        .overall-luck-board { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .luck-card { background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid var(--border); text-align: center; }
-        .luck-card h5 { margin: 0 0 8px 0; font-size: 12px; color: var(--text-sub); }
+        .btn-submit { width: 100%; padding: 12px; background-color: var(--primary); color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 5px;}
+        .btn-submit:hover { background-color: var(--primary-hover); }
+
+        /* 統計區塊 */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .stat-box { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px; border-radius: 6px; text-align: center; }
+        .stat-box h5 { margin: 0 0 5px 0; font-size: 12px; color: var(--text-sub); }
+        .stat-box-bad { background: #fef2f2; border-color: #fecaca; }
         
         /* 稱號顏色設定 */
-        .title-god { color: #16a34a; font-weight: bold; } /* 天選之子 (深綠) */
-        .title-lucky { color: #4ade80; } /* 幸運兒 (淺綠) */
-        .title-plain { color: #facc15; } /* 平凡人 (黃色) */
-        .title-unlucky { color: #fb923c; } /* 小不幸運 (橘色) */
-        .title-bad { color: #dc2626; } /* 小倒霉鬼 (深紅) */
-
-        /* 巔峰榜 */
-        .peak-board { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 12px; border-radius: 8px; border: 1px solid #4ade8055; margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px;}
-        .peak-item { display: flex; justify-content: space-between; font-size: 13px; font-weight: bold;}
-        .peak-label-best { color: #4ade80; } .peak-label-spook { color: #c084fc; }
+        .title-god { color: #16a34a; font-weight: bold; } /* 天選之子 */
+        .title-lucky { color: #4ade80; } /* 幸運兒 */
+        .title-plain { color: #ca8a04; } /* 平凡人 */
+        .title-unlucky { color: #ea580c; } /* 小不幸運 */
+        .title-bad { color: #dc2626; font-weight: bold;} /* 小倒霉鬼 */
 
         /* 長條圖 */
-        .chart-container { display: flex; align-items: flex-end; gap: 8px; height: 180px; padding: 25px 5px 5px 5px; overflow-x: auto; background-color: #0f172a; border-radius: 8px; border: 1px solid var(--border); }
+        .chart-container { display: flex; align-items: flex-end; gap: 8px; height: 180px; padding: 25px 5px 5px 5px; overflow-x: auto; background-color: #f8fafc; border-radius: 6px; border: 1px solid var(--border); }
         .bar-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-width: 40px; height: 100%; }
-        .wai-circle { width: 18px; height: 18px; border-radius: 50%; color: white; font-size: 8px; display: flex; justify-content: center; align-items: center; margin-bottom: 4px; border: 1px solid #94a3b8; font-weight: bold; }
-        .circle-std { background: #475569; } .circle-lim { background: #8b5cf6; } .circle-oshi { background: var(--oshi-color); border-color: #fbcfe8;}
-        .bar-value { font-size: 10px; font-weight: bold; color: white; margin-bottom: 4px; }
+        .wai-circle { width: 18px; height: 18px; border-radius: 50%; color: white; font-size: 8px; display: flex; justify-content: center; align-items: center; margin-bottom: 4px; font-weight: bold; }
+        .circle-target { background: #8b5cf6; } .circle-wai { background: #64748b; } .circle-oshi { background: var(--oshi-color); }
+        .bar-value { font-size: 11px; font-weight: bold; color: #334155; margin-bottom: 4px; }
         .bar-fill { width: 25px; border-radius: 4px 4px 0 0; }
-        .bar-label { font-size: 8px; color: var(--text-sub); margin-top: 6px; max-width: 40px; overflow: hidden; text-align: center; }
+        .bar-label { font-size: 9px; color: var(--text-sub); margin-top: 6px; max-width: 40px; overflow: hidden; text-align: center; white-space: nowrap;}
 
         /* 歷史紀錄 */
-        .record-card { background-color: #0f172a; border: 1px solid var(--border); padding: 10px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-        .record-info h4 { margin: 0 0 4px 0; font-size: 13px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; } 
-        .record-info p { margin: 0; font-size: 11px; color: var(--text-sub); display: flex; align-items: center; gap: 4px; flex-wrap: wrap;}
-        .tag { padding: 1px 4px; border-radius: 3px; font-size: 8px; color: white; }
-        .tag-lim { background: var(--limited-color); } .tag-re { background: var(--rerun-color); } .tag-std { background: #475569; } .tag-oshi { background: var(--oshi-color); }
-        .del-btn { background: #ef4444; color: white; border: none; padding: 2px 6px; border-radius: 4px; font-size: 9px; cursor: pointer; margin-left: 5px;}
-        .luck-badge { padding: 4px 8px; border-radius: 12px; font-weight: bold; font-size: 10px; min-width: 45px; text-align: center; }
-        .lead-text { font-weight: bold; margin-right: 4px; display: flex; align-items: center; gap: 2px;}
-        .oshi-heart { color: var(--oshi-color); font-size: 10px;}
+        .record-card { background-color: #f8fafc; border: 1px solid var(--border); padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .record-info h4 { margin: 0 0 6px 0; font-size: 14px; color: #1e293b;} 
+        .record-info p { margin: 0; font-size: 12px; color: var(--text-sub); }
+        .tag { padding: 2px 6px; border-radius: 4px; font-size: 10px; color: white; margin-right: 5px;}
+        .tag-target { background: #8b5cf6; } .tag-wai { background: #64748b; } .tag-oshi { background: var(--oshi-color); }
+        .del-btn { background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; margin-left: 10px;}
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>✨ 抽卡紀錄分析器</h1>
-    <p class="subtitle">支援主推防歪與體質鑑定</p>
+    <div class="block">
+        <h1>📊 戀與深空抽卡紀錄分析器</h1>
+    </div>
 
-    <div class="form-group" style="background: rgba(236, 72, 153, 0.05); padding: 12px; border-radius: 8px; border: 1px dashed var(--oshi-color);">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <label class="group-label" style="color: #f472b6; margin: 0;" id="oshiSummary">💖 尚未設定主推</label>
-            <button id="oshiToggleBtn" onclick="toggleOshiEdit()" style="background:none; border:none; color:var(--oshi-color); font-size:12px; cursor:pointer; padding:0; font-weight:bold;">[設定]</button>
-        </div>
-        <div id="oshiDetail" style="display: none; margin-top: 8px; font-size: 11px; color: #f472b6;">*混池獲得主推非定向卡將視為達成目標。</div>
-        <div class="radio-group" id="oshiGroup" style="display: none; margin-top: 10px;">
-            <label class="radio-label oshi-label"><input type="checkbox" name="oshi" value="祁煜" onchange="saveOshis()"> 🐟 祁煜</label>
-            <label class="radio-label oshi-label"><input type="checkbox" name="oshi" value="沈星回" onchange="saveOshis()"> 🌟 沈星回</label>
-            <label class="radio-label oshi-label"><input type="checkbox" name="oshi" value="黎深" onchange="saveOshis()"> 🍐 黎深</label>
-            <label class="radio-label oshi-label"><input type="checkbox" name="oshi" value="秦徹" onchange="saveOshis()"> 🚘 秦徹</label>
-            <label class="radio-label oshi-label"><input type="checkbox" name="oshi" value="夏以晝" onchange="saveOshis()"> 🍎 夏以晝</label>
+    <div class="block">
+        <h3>💖 選自推 (可隨時更改)</h3>
+        <div class="radio-group" id="oshiGroup">
+            <label class="radio-label"><input type="checkbox" name="oshi" value="祁煜" onchange="saveOshis()"> 🐟 祁煜</label>
+            <label class="radio-label"><input type="checkbox" name="oshi" value="沈星回" onchange="saveOshis()"> 🌟 沈星回</label>
+            <label class="radio-label"><input type="checkbox" name="oshi" value="黎深" onchange="saveOshis()"> 🍐 黎深</label>
+            <label class="radio-label"><input type="checkbox" name="oshi" value="秦徹" onchange="saveOshis()"> 🚘 秦徹</label>
+            <label class="radio-label"><input type="checkbox" name="oshi" value="夏以晝" onchange="saveOshis()"> 🍎 夏以晝</label>
         </div>
     </div>
 
-    <div class="pending-board">
-        <div class="pending-item pending-lim" onclick="editPending('lim')">限定池已墊 ✏️<span id="pLim">0</span></div>
-        <div class="pending-item pending-re" onclick="editPending('re')">復刻池已墊 ✏️<span id="pRe">0</span></div>
-    </div>
-
-    <div class="form-group">
-        <label class="group-label">1. 卡池與機制</label>
-        <div class="radio-group">
-            <label class="radio-label"><input type="radio" name="mainPool" value="限定" checked onchange="updateOptions()"> 💠 限定</label>
-            <label class="radio-label"><input type="radio" name="mainPool" value="復刻" onchange="updateOptions()"> 🔄 復刻</label>
+    <div class="block">
+        <h3>📝 新增紀錄</h3>
+        <div class="form-group">
+            <label class="group-label">1. 卡池名稱 (自動帶入卡池資訊)</label>
+            <input type="text" id="bannerName" placeholder="請輸入或選擇卡池名稱..." list="bannerList" onchange="autoFillBannerInfo()">
+            <datalist id="bannerList"></datalist>
         </div>
-        <div class="radio-group" id="subPoolGroup" onchange="updateOptions()" style="margin-top: 8px;">
-            <label class="radio-label"><input type="radio" name="subPool" value="單人" checked>👤單人</label>
-            <label class="radio-label"><input type="radio" name="subPool" value="日卡">☀️日卡</label>
-            <label class="radio-label"><input type="radio" name="subPool" value="混池">👥混池</label>
+
+        <div class="form-group" style="display: flex; gap: 10px;">
+            <div style="flex: 1;">
+                <label class="group-label">2. 卡池種類 (大類)</label>
+                <div class="radio-group">
+                    <label class="radio-label"><input type="radio" name="mainPool" value="限定" checked> 限定</label>
+                    <label class="radio-label"><input type="radio" name="mainPool" value="復刻"> 復刻</label>
+                </div>
+            </div>
+            <div style="flex: 1;">
+                <label class="group-label">卡池種類 (細項)</label>
+                <div class="radio-group">
+                    <label class="radio-label"><input type="radio" name="subPool" value="單人" checked> 單人</label>
+                    <label class="radio-label"><input type="radio" name="subPool" value="日卡"> 日卡</label>
+                    <label class="radio-label"><input type="radio" name="subPool" value="混池"> 混池</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="group-label">3. 抽到的男主與卡名 (系統將自動判斷是否歪卡)</label>
+            <div class="radio-group" style="margin-bottom: 8px;">
+                <label class="radio-label"><input type="radio" name="pulledLead" value="祁煜" checked> 🐟 祁煜</label>
+                <label class="radio-label"><input type="radio" name="pulledLead" value="沈星回"> 🌟 沈星回</label>
+                <label class="radio-label"><input type="radio" name="pulledLead" value="黎深"> 🍐 黎深</label>
+                <label class="radio-label"><input type="radio" name="pulledLead" value="秦徹"> 🚘 秦徹</label>
+                <label class="radio-label"><input type="radio" name="pulledLead" value="夏以晝"> 🍎 夏以晝</label>
+            </div>
+            <input type="text" id="cardName" placeholder="請輸入思念名稱 (選填)">
+        </div>
+
+        <div class="form-group">
+            <label class="group-label">4. 花費抽數 (出金當下的抽數 1~70)</label>
+            <input type="number" id="pulls" placeholder="例如：65" min="1" max="70">
+        </div>
+        
+        <button class="btn-submit" onclick="addRecord()">存檔紀錄 💾</button>
+    </div>
+
+    <div class="block">
+        <h3>📈 運氣與體質看板</h3>
+        <div class="stats-grid">
+            <div class="stat-box" id="luckLim"><h5>💠 限時池運氣</h5>---</div>
+            <div class="stat-box" id="luckRe"><h5>🔄 復刻池運氣</h5>---</div>
+            <div class="stat-box stat-box-bad" id="bestBanner"><h5>🏆 最歐卡池</h5>---</div>
+            <div class="stat-box stat-box-bad" id="worstSpook"><h5>💔 最常歪誰</h5>---</div>
         </div>
     </div>
 
-    <div class="form-group">
-        <label class="group-label">2. 獲得對象與結果</label>
-        <div class="radio-group">
-            <label class="radio-label"><input type="radio" name="lead" value="祁煜" checked onchange="updateCardRecommendations()"> 🐟</label>
-            <label class="radio-label"><input type="radio" name="lead" value="沈星回" onchange="updateCardRecommendations()"> 🌟</label>
-            <label class="radio-label"><input type="radio" name="lead" value="黎深" onchange="updateCardRecommendations()"> 🍐</label>
-            <label class="radio-label"><input type="radio" name="lead" value="秦徹" onchange="updateCardRecommendations()"> 🚘</label>
-            <label class="radio-label"><input type="radio" name="lead" value="夏以晝" onchange="updateCardRecommendations()"> 🍎</label>
+    <div class="block">
+        <h3>📊 抽卡歷程圖</h3>
+        <div id="chartContainer" class="chart-container"></div>
+    </div>
+
+    <div class="block">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #bfdbfe; padding-bottom: 5px; margin-bottom: 15px;">
+            <h3 style="margin: 0; border: none; padding: 0;">📜 歷史資料</h3>
+            <button onclick="clearAll()" style="background:none; border:none; color:#ef4444; font-size:12px; cursor:pointer; font-weight:bold;">[清空資料]</button>
         </div>
-        <div class="radio-group" id="resGroup" style="margin-top: 8px;"></div>
+        <div id="recordList"></div>
     </div>
-
-    <div class="form-group">
-        <label class="group-label">3. 卡池與思念名稱</label>
-        <div style="display: flex; gap: 8px;">
-            <input type="text" id="bannerName" placeholder="卡池名稱" style="flex: 1;">
-            <input type="text" id="cardName" placeholder="思念名稱 (選填)" style="flex: 1;" list="stdCards">
-            <datalist id="stdCards"></datalist>
-        </div>
-    </div>
-
-    <div class="form-group">
-        <label class="group-label">4. 花費抽數 (1~70)</label>
-        <input type="number" id="pulls" placeholder="距離上次出金花費抽數" style="width: 100%;" min="1" max="70">
-    </div>
-
-    <button class="main-btn" onclick="addRecord()">新增紀錄 📝</button>
-
-    <div class="section-header">📊 體質鑑定與巔峰榜</div>
-    <div class="peak-board" id="peakBoard"></div>
-    <div class="overall-luck-board">
-        <div class="luck-card" id="luckLim"><h5>限定池體質</h5>---</div>
-        <div class="luck-card" id="luckRe"><h5>復刻池體質</h5>---</div>
-    </div>
-    <div id="chartContainer" class="chart-container"></div>
-
-    <div class="section-header">📜 歷史清單 <button onclick="clearAll()" style="background:none; border:none; color:#ef4444; font-size:11px; cursor:pointer;">清空</button></div>
-    <div id="recordList"></div>
 </div>
+
+<script src="love_and_deepspace_events.js"></script>
 
 <script>
     const leadIcons = {'祁煜':'🐟', '沈星回':'🌟', '黎深':'🍐', '秦徹':'🚘', '夏以晝':'🍎'};
 
-    // 監聽 resGroup 的變動以更新推薦選單
-    document.getElementById('resGroup').addEventListener('change', updateCardRecommendations);
+    // 1. 初始化資料庫至下拉選單
+    function initEventData() {
+        if (typeof eventCards === 'undefined') return alert("找不到資料庫！請確認 love_and_deepspace_events.js 檔案存在。");
+        const datalist = document.getElementById('bannerList');
+        const uniqueBanners = [...new Set(eventCards.map(e => e.eventName))];
+        uniqueBanners.forEach(banner => {
+            const option = document.createElement('option');
+            option.value = banner;
+            datalist.appendChild(option);
+        });
+    }
 
-    function toggleOshiEdit() {
-        const group = document.getElementById('oshiGroup');
-        const detail = document.getElementById('oshiDetail');
-        const btn = document.getElementById('oshiToggleBtn');
-        if (group.style.display === 'none') {
-            group.style.display = 'flex'; detail.style.display = 'block'; btn.innerText = '[收起]';
-        } else {
-            group.style.display = 'none'; detail.style.display = 'none'; btn.innerText = '[修改]';
+    // 2. 自動帶入卡池資訊 (當選擇卡池名稱時)
+    function autoFillBannerInfo() {
+        const bannerName = document.getElementById('bannerName').value;
+        const event = eventCards.find(e => e.eventName === bannerName);
+        if (event) {
+            // 自動判斷大類 (如果名稱有復刻，或是使用者自己判斷，這邊做個簡單處理)
+            if(event.poolType.includes('復刻')) {
+                document.querySelector('input[name="mainPool"][value="復刻"]').checked = true;
+            } else {
+                document.querySelector('input[name="mainPool"][value="限定"]').checked = true;
+            }
+
+            // 自動判斷細項
+            if(event.poolType.includes('混池')) document.querySelector('input[name="subPool"][value="混池"]').checked = true;
+            else if(event.poolType.includes('日卡')) document.querySelector('input[name="subPool"][value="日卡"]').checked = true;
+            else document.querySelector('input[name="subPool"][value="單人"]').checked = true;
         }
     }
 
-    function updateOshiSummary(oshis) {
-        const summary = document.getElementById('oshiSummary');
-        if (oshis.length > 0) {
-            const icons = oshis.map(name => leadIcons[name] || '').join('');
-            summary.innerHTML = `💖 主推守護中：${icons}`;
-        } else {
-            summary.innerHTML = `💖 尚未設定主推`;
-        }
-    }
-
+    // 3. 自推存取
     function saveOshis() {
         const oshis = Array.from(document.querySelectorAll('input[name="oshi"]:checked')).map(cb => cb.value);
         localStorage.setItem('oshis', JSON.stringify(oshis));
-        updateOshiSummary(oshis);
+        renderUI();
     }
 
-    function loadOshisAndInitDisplay() {
+    function loadOshis() {
         const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
         document.querySelectorAll('input[name="oshi"]').forEach(cb => cb.checked = oshis.includes(cb.value));
-        updateOshiSummary(oshis);
     }
 
-    function updateOptions() {
-        const sub = document.querySelector('input[name="subPool"]:checked').value;
-        const resGroup = document.getElementById('resGroup');
-        if (sub === '混池') {
-            resGroup.innerHTML = `
-                <label class="radio-label"><input type="radio" name="res" value="target" checked> 🎯 定向</label>
-                <label class="radio-label"><input type="radio" name="res" value="wai_lim"> 🎭 其他限定</label>
-                <label class="radio-label"><input type="radio" name="res" value="wai_std"> ㊙️ 常駐</label>
-            `;
-        } else {
-            resGroup.innerHTML = `
-                <label class="radio-label"><input type="radio" name="res" value="target" checked> 🎯 當期限定</label>
-                <label class="radio-label"><input type="radio" name="res" value="wai_std"> ㊙️ 常駐</label>
-            `;
-        }
-        updateCardRecommendations();
-    }
-
-    // 更新常駐卡推薦選單
-    function updateCardRecommendations() {
-        const resNode = document.querySelector('input[name="res"]:checked');
-        const leadNode = document.querySelector('input[name="lead"]:checked');
-        const dataList = document.getElementById('stdCards');
-        dataList.innerHTML = ''; 
-
-        if (resNode && resNode.value === 'wai_std' && leadNode) {
-            const db = JSON.parse(localStorage.getItem('db_v21')) || [];
-            // 過濾出：歪常駐、男主相符、且有填寫卡片名稱的紀錄
-            const cards = db.filter(r => r.res === 'wai_std' && r.lead === leadNode.value && r.card && r.card.trim() !== '')
-                            .map(r => r.card.trim());
-            // 去除重複的名稱
-            const uniqueCards = [...new Set(cards)];
-            uniqueCards.forEach(card => {
-                const option = document.createElement('option');
-                option.value = card;
-                dataList.appendChild(option);
-            });
-        }
-    }
-
-    // 更新後的單張評價顏色
+    // 4. 新版評分系統 (採用自訂的五個分類)
     const judgeS = (p) => {
-        if (p <= 10) return {t:"天選之子 ✨", c:"#16a34a", s:2}; // 深綠
-        if (p <= 28) return {t:"幸運兒 🌟", c:"#4ade80", s:1}; // 淺綠
-        if (p <= 45) return {t:"平凡人 😐", c:"#facc15", s:0}; // 黃色
-        if (p <= 60) return {t:"小不幸運 🌧️", c:"#fb923c", s:-1}; // 橘色
-        return {t:"小倒霉鬼 🌩️", c:"#dc2626", s:-2}; // 深紅
+        if (p <= 7) return {t:"天選之子", c:"#16a34a", s:2};
+        if (p <= 24) return {t:"幸運兒", c:"#4ade80", s:1};
+        if (p <= 35) return {t:"平凡人", c:"#ca8a04", s:0};
+        if (p <= 45) return {t:"小不幸運", c:"#ea580c", s:-1};
+        return {t:"小倒霉鬼", c:"#dc2626", s:-2};
     };
 
+    // 歪卡後大保底的評分
     const judgeT = (p) => {
-        if (p <= 26) return {t:"天選之子 ✨", c:"#16a34a", s:2}; 
-        if (p <= 65) return {t:"幸運兒 🌟", c:"#4ade80", s:1};
-        if (p <= 85) return {t:"平凡人 😐", c:"#facc15", s:0};
-        if (p <= 110) return {t:"小不幸運 🌧️", c:"#fb923c", s:-1};
-        return {t:"小倒霉鬼 🌩️", c:"#dc2626", s:-2};
+        if (p <= 26) return {t:"天選之子", c:"#16a34a", s:2}; 
+        if (p <= 65) return {t:"幸運兒", c:"#4ade80", s:1};
+        if (p <= 85) return {t:"平凡人", c:"#ca8a04", s:0};
+        if (p <= 110) return {t:"小不幸運", c:"#ea580c", s:-1};
+        return {t:"小倒霉鬼", c:"#dc2626", s:-2};
     };
 
+    // 墊池變數管理
     const getP = (type) => parseInt(localStorage.getItem('p_' + type)) || 0;
-    const setP = (type, v) => { localStorage.setItem('p_' + type, v); renderUI(); };
+    const setP = (type, v) => localStorage.setItem('p_' + type, v);
 
-    function editPending(type) {
-        const v = prompt("手動修改墊池進度：", getP(type));
-        if (v !== null && !isNaN(parseInt(v))) setP(type, parseInt(v));
-    }
-
+    // 5. 核心：新增紀錄與自動判斷歪卡
     function addRecord() {
+        const banner = document.getElementById('bannerName').value.trim();
         const main = document.querySelector('input[name="mainPool"]:checked').value;
         const sub = document.querySelector('input[name="subPool"]:checked').value;
-        const lead = document.querySelector('input[name="lead"]:checked').value;
-        let res = document.querySelector('input[name="res"]:checked').value;
-        const banner = document.getElementById('bannerName').value.trim() || "未填寫名稱";
+        const pulledLead = document.querySelector('input[name="pulledLead"]:checked').value;
         const card = document.getElementById('cardName').value.trim();
         const pulls = parseInt(document.getElementById('pulls').value);
 
-        if (isNaN(pulls) || pulls < 1 || pulls > 70) return alert("請輸入 1-70 抽！");
+        if (!banner) return alert("請輸入卡池名稱！");
+        if (isNaN(pulls) || pulls < 1 || pulls > 70) return alert("請輸入正確的抽數 (1-70)！");
+
+        const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
+        const event = typeof eventCards !== 'undefined' ? eventCards.find(e => e.eventName === banner) : null;
+        
+        let judgeResult = 'wai'; // 預設為歪
+        
+        // 核心判斷邏輯
+        if (event && event.cards[pulledLead] && (!card || event.cards[pulledLead].includes(card))) {
+            // 卡池中有這位男主，且卡名相符 (或沒填卡名但男主對了)，視為目標達成！
+            judgeResult = 'target';
+        } else if (oshis.includes(pulledLead)) {
+            // 歪了，但是是自推！
+            judgeResult = 'oshi_spook';
+        }
 
         const poolKey = main === '限定' ? 'lim' : 're';
         let currentP = getP(poolKey);
-        const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
-        const isOshi = oshis.includes(lead);
-
-        if (res === 'wai_lim' && isOshi) res = 'oshi_lim';
-
-        let rec = { id: Date.now(), main, sub, lead, banner, card, pulls, res, isOshi };
         
-        if (res === 'target' || res === 'oshi_lim') {
-            rec.total = currentP + pulls;
+        let rec = { id: Date.now(), main, sub, lead: pulledLead, banner, card, pulls, res: judgeResult };
+        
+        if (judgeResult === 'target') {
+            rec.total = currentP + pulls; // 加上之前墊的
             rec.luck = judgeT(rec.total);
-            setP(poolKey, 0); 
+            setP(poolKey, 0); // 清空墊池
         } else {
             rec.total = pulls;
             rec.luck = judgeS(pulls);
-            setP(poolKey, currentP + pulls); 
+            setP(poolKey, currentP + pulls); // 累加墊池
         }
 
-        let db = JSON.parse(localStorage.getItem('db_v21')) || [];
+        let db = JSON.parse(localStorage.getItem('db_v3')) || [];
         db.unshift(rec);
-        localStorage.setItem('db_v21', JSON.stringify(db));
+        localStorage.setItem('db_v3', JSON.stringify(db));
         
+        // 清空表單
         document.getElementById('cardName').value = '';
         document.getElementById('pulls').value = '';
-        
-        updateCardRecommendations(); // 新增完刷新推薦列表
         renderUI();
     }
 
     function deleteRec(id) {
         if (confirm("確定刪除此筆紀錄？")) {
-            let db = JSON.parse(localStorage.getItem('db_v21')) || [];
+            let db = JSON.parse(localStorage.getItem('db_v3')) || [];
             db = db.filter(r => r.id !== id);
-            localStorage.setItem('db_v21', JSON.stringify(db));
-            updateCardRecommendations(); // 刪除後刷新推薦列表
+            localStorage.setItem('db_v3', JSON.stringify(db));
             renderUI();
         }
     }
 
+    // 6. 渲染畫面 (看板、長條圖、列表)
     function renderUI() {
-        document.getElementById('pLim').innerText = getP('lim');
-        document.getElementById('pRe').innerText = getP('re');
-        const db = JSON.parse(localStorage.getItem('db_v21')) || [];
-        const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
-
+        const db = JSON.parse(localStorage.getItem('db_v3')) || [];
+        
+        // 計算運氣平均
         const calcOverall = (filter) => {
-            const items = db.filter(r => r.main === filter && (r.res === 'target' || r.res === 'oshi_lim')); 
+            const items = db.filter(r => r.main === filter && r.res === 'target'); 
             if (!items.length) return "---";
             const avg = items.reduce((a,b) => a + b.luck.s, 0) / items.length;
-            if (avg >= 1.5) return '<span class="title-god">👑 天選之子</span>';
-            if (avg >= 0.5) return '<span class="title-lucky">✨ 幸運兒</span>';
-            if (avg >= -0.5) return '<span class="title-plain">😐 平凡人</span>';
-            if (avg >= -1.5) return '<span class="title-unlucky">🌧️ 小不幸運</span>';
-            return '<span class="title-bad">🌩️ 小倒霉鬼</span>';
+            if (avg >= 1.5) return '<span class="title-god">天選之子</span>';
+            if (avg >= 0.5) return '<span class="title-lucky">幸運兒</span>';
+            if (avg >= -0.5) return '<span class="title-plain">平凡人</span>';
+            if (avg >= -1.5) return '<span class="title-unlucky">小不幸運</span>';
+            return '<span class="title-bad">小倒霉鬼</span>';
         };
-        document.getElementById('luckLim').innerHTML = `<h5>限定池體質</h5>${calcOverall('限定')}`;
-        document.getElementById('luckRe').innerHTML = `<h5>復刻池體質</h5>${calcOverall('復刻')}`;
+        document.getElementById('luckLim').innerHTML = `<h5>💠 限時池運氣</h5>${calcOverall('限定')}`;
+        document.getElementById('luckRe').innerHTML = `<h5>🔄 復刻池運氣</h5>${calcOverall('復刻')}`;
 
-        let peakHTML = '';
-        if (db.length > 0) {
-            const targets = db.filter(r => r.res === 'target' || r.res === 'oshi_lim');
-            if(targets.length > 0){
-                const sorted = [...targets].sort((a,b) => b.luck.s - a.luck.s || a.total - b.total);
-                const best = sorted[0];
-                const bestLeadStr = best.lead ? `${oshis.includes(best.lead)?'💖':''}${leadIcons[best.lead]||''}${best.lead}` : '';
-                peakHTML += `<div class="peak-item"><span class="peak-label-best">🏆 巔峰紀錄:</span> <span>${bestLeadStr} ${best.banner} (${best.total}抽)</span></div>`;
-            }
-
-            // 歪卡常客統計
-            const waiRecords = db.filter(r => r.res === 'wai_std' || r.res === 'wai_lim');
-            if (waiRecords.length > 0) {
-                let waiCounts = {};
-                waiRecords.forEach(r => {
-                    if (r.lead) waiCounts[r.lead] = (waiCounts[r.lead] || 0) + 1;
-                });
-                let maxCount = 0;
-                let maxLeads = [];
-                for (let lead in waiCounts) {
-                    if (waiCounts[lead] > maxCount) {
-                        maxCount = waiCounts[lead];
-                        maxLeads = [lead];
-                    } else if (waiCounts[lead] === maxCount) {
-                        maxLeads.push(lead);
-                    }
-                }
-                const waiLeadStr = maxLeads.map(l => `${leadIcons[l]||''}${l}`).join('、');
-                peakHTML += `<div class="peak-item" style="margin-top:4px;"><span class="peak-label-spook">💔 歪卡常客:</span> <span>${waiLeadStr} (${maxCount}次)</span></div>`;
-            }
-            
-            document.getElementById('peakBoard').innerHTML = peakHTML || '<div style="text-align:center;font-size:12px;color:#94a3b8">尚無目標數據</div>';
+        // 找最歐卡池
+        const targets = db.filter(r => r.res === 'target');
+        if(targets.length > 0){
+            const best = targets.sort((a,b) => a.total - b.total)[0];
+            document.getElementById('bestBanner').innerHTML = `<h5>🏆 最歐卡池</h5><span style="font-size:13px; font-weight:bold;">${best.banner} (${best.total}抽)</span>`;
         } else {
-            document.getElementById('peakBoard').innerHTML = `<div style="text-align:center;font-size:12px;color:#94a3b8">尚無資料</div>`;
+            document.getElementById('bestBanner').innerHTML = `<h5>🏆 最歐卡池</h5>---`;
         }
 
+        // 找最常歪誰
+        const waiRecords = db.filter(r => r.res === 'wai');
+        if (waiRecords.length > 0) {
+            let counts = {};
+            waiRecords.forEach(r => counts[r.lead] = (counts[r.lead] || 0) + 1);
+            let topWai = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
+            document.getElementById('worstSpook').innerHTML = `<h5>💔 最常歪誰</h5><span style="font-size:13px; font-weight:bold;">${leadIcons[topWai]}${topWai} (${counts[topWai]}次)</span>`;
+        } else {
+            document.getElementById('worstSpook').innerHTML = `<h5>💔 最常歪誰</h5>---`;
+        }
+
+        // 繪製長條圖
         const chart = document.getElementById('chartContainer');
         chart.innerHTML = '';
         [...db].reverse().forEach(r => {
             const h = (r.pulls / 70) * 100;
             const wrap = document.createElement('div'); wrap.className = 'bar-wrapper';
-            let iconStr = '🎯'; let circleClass = 'circle-lim';
-            if(r.res === 'wai_std' || r.res === 'wai_lim') { iconStr = '㊙️'; circleClass = 'circle-std'; }
-            if(r.res === 'oshi_lim') { iconStr = '💖'; circleClass = 'circle-oshi'; } 
-            wrap.innerHTML = `<div class="wai-circle ${circleClass}">${iconStr}</div><div class="bar-value">${r.pulls}</div><div class="bar-fill" style="height:${h}%; background:${r.luck.c}"></div><div class="bar-label">${r.banner.substring(0,2)}..</div>`;
+            
+            let iconStr = '🎯'; let circleClass = 'circle-target';
+            if(r.res === 'wai') { iconStr = '💔'; circleClass = 'circle-wai'; }
+            if(r.res === 'oshi_spook') { iconStr = '💖'; circleClass = 'circle-oshi'; } 
+            
+            wrap.innerHTML = `<div class="wai-circle ${circleClass}">${iconStr}</div>
+                              <div class="bar-value">${r.pulls}</div>
+                              <div class="bar-fill" style="height:${h}%; background:${r.luck.c}"></div>
+                              <div class="bar-label" title="${r.banner}">${r.banner.substring(0,3)}..</div>`;
             chart.appendChild(wrap);
         });
 
-        // 歷史清單標籤與詳細資訊生成
+        // 歷史清單
         document.getElementById('recordList').innerHTML = db.map(r => {
-            const icon = leadIcons[r.lead] || '';
-            const isOshi = oshis.includes(r.lead);
-            const leadStr = r.lead ? `<span class="lead-text">${isOshi?'<span class="oshi-heart">💖</span>':''}${icon} ${r.lead}</span>` : '';
-
-            let statusText = '定向'; let tagClass = 'tag-lim';
-            if(r.res === 'target' && r.sub !== '混池') { statusText = '當期限定'; }
-            if(r.res === 'wai_std') { statusText = '歪常駐'; tagClass = 'tag-std'; }
-            if(r.res === 'wai_lim') { statusText = '歪其他限定'; tagClass = 'tag-std'; }
-            if(r.res === 'oshi_lim') { statusText = '主推防歪'; tagClass = 'tag-oshi'; }
+            let statusText = '當期 UP'; let tagClass = 'tag-target';
+            if(r.res === 'wai') { statusText = '歪卡'; tagClass = 'tag-wai'; }
+            if(r.res === 'oshi_spook') { statusText = '歪自推'; tagClass = 'tag-oshi'; }
             
+            const leadStr = `${leadIcons[r.lead]} ${r.lead}`;
             const cardDisplay = r.card ? ` | ${r.card}` : '';
 
             return `
             <div class="record-card">
                 <div class="record-info">
-                    <h4><span class="tag ${r.main==='限定'?'tag-lim':'tag-re'}">${r.main}${r.sub}</span><span class="tag ${tagClass}">${statusText}</span> ${r.banner}</h4>
-                    <p>${leadStr}${cardDisplay} | <b>${r.pulls}抽</b> ${(r.res==='target'||r.res==='oshi_lim')?'(總結算 '+r.total+' 抽)':''} <button class="del-btn" onclick="deleteRec(${r.id})">刪除</button></p>
+                    <h4><span class="tag ${tagClass}">${statusText}</span> ${r.banner}</h4>
+                    <p>${leadStr}${cardDisplay} | <b>${r.pulls}抽</b> ${r.res==='target' ? '(含墊池 '+r.total+' 抽)' : ''}</p>
                 </div>
-                <div class="luck-badge" style="border:1px solid ${r.luck.c}; color:${r.luck.c}">${r.luck.t}</div>
+                <div style="text-align:right;">
+                    <span style="color:${r.luck.c}; font-weight:bold; font-size:14px;">${r.luck.t}</span>
+                    <button class="del-btn" onclick="deleteRec(${r.id})">刪除</button>
+                </div>
             </div>
             `;
         }).join('');
     }
 
-    function clearAll() { if(confirm("確定清空所有資料？此操作無法復原。")) { localStorage.removeItem('db_v21'); renderUI(); } }
-    
-    function recalculateOldData() {
-        let db = JSON.parse(localStorage.getItem('db_v21'));
-        if (db) {
-            db.forEach(rec => {
-                if (rec.res === 'target' || rec.res === 'oshi_lim') rec.luck = judgeT(rec.total);
-                else rec.luck = judgeS(rec.pulls);
-            });
-            localStorage.setItem('db_v21', JSON.stringify(db));
-        }
+    function clearAll() { 
+        if(confirm("確定清空所有資料？此操作無法復原。")) { 
+            localStorage.removeItem('db_v3'); 
+            localStorage.removeItem('p_lim'); 
+            localStorage.removeItem('p_re'); 
+            renderUI(); 
+        } 
     }
-
-    loadOshisAndInitDisplay();
-    recalculateOldData();
-    updateOptions(); 
+    
+    // 初始化啟動
+    loadOshis();
+    initEventData();
     renderUI();
 </script>
 </body>
