@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>戀與深空 | 抽卡紀錄分析器 (v21)</title>
+    <style>
+        :root {
+            --bg-color: #0f172a; --card-bg: #1e293b; --primary: #8b5cf6;
+            --primary-hover: #7c3aed; --text-main: #f8fafc; --text-sub: #cbd5e1;
+            --border: #334155; --limited-color: #3b82f6; --rerun-color: #ec4899;
+            --oshi-color: #ec4899; 
+        }
+
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 15px; display: flex; justify-content: center; }
+        .container { max-width: 600px; width: 100%; background-color: var(--card-bg); padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid var(--border); }
+        h1 { text-align: center; color: #c4b5fd; margin-bottom: 5px; font-size: 22px; }
+        p.subtitle { text-align: center; color: var(--text-sub); font-size: 13px; margin-bottom: 20px; }
+        
+        /* 墊池面板 */
+        .pending-board { display: flex; justify-content: space-between; background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; font-size: 12px; font-weight: bold; }
+        .pending-item { cursor: pointer; padding: 4px; border-radius: 6px; transition: 0.2s; flex: 1; text-align: center;}
+        .pending-item:hover { background: rgba(255,255,255,0.05); }
+        .pending-item span { font-size: 15px; color: white; display: block; margin-top: 3px;}
+        .pending-lim { color: var(--limited-color); border-right: 1px solid var(--border); } .pending-re { color: var(--rerun-color); }
+
+        /* 表單樣式 */
+        .form-group { margin-bottom: 16px; }
+        label.group-label { display: block; margin-bottom: 6px; font-size: 13px; color: #e2e8f0; font-weight: bold; }
+        
+        input[type="text"], input[type="number"] { width: 100%; padding: 10px; background-color: #0f172a; border: 1px solid var(--border); color: white; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
+        
+        .radio-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+        .radio-label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; background: #0f172a; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); transition: 0.2s;}
+        .radio-label:hover { border-color: #6366f1; background: rgba(99, 102, 241, 0.1); }
+        
+        input[type="radio"], input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var(--primary); cursor: pointer; }
+        
+        .oshi-label input[type="checkbox"] { accent-color: var(--oshi-color); }
+        .oshi-label:hover { border-color: var(--oshi-color); background: rgba(236, 72, 153, 0.1); }
+
+        .main-btn { width: 100%; padding: 12px; background-color: var(--primary); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+        .main-btn:hover { background-color: var(--primary-hover); }
+        
+        /* 統計面板 */
+        .section-header { font-size: 16px; border-bottom: 2px solid var(--border); padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; margin-top: 25px; }
+        .overall-luck-board { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .luck-card { background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid var(--border); text-align: center; }
+        .luck-card h5 { margin: 0 0 8px 0; font-size: 12px; color: var(--text-sub); }
+        
+        /* 巔峰榜 */
+        .peak-board { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 12px; border-radius: 8px; border: 1px solid #4ade8055; margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px;}
+        .peak-item { display: flex; justify-content: space-between; font-size: 13px; font-weight: bold;}
+        .peak-label-best { color: #4ade80; } .peak-label-worst { color: #f87171; } .peak-label-spook { color: #c084fc; }
+
+        .title-ouhuang { color: #facc15; } .title-ou { color: #4ade80; } .title-asia { color: #fb923c; } .title-xiao { color: #f87171; } .title-feiqiu { color: #94a3b8; }
+
+        /* 長條圖 */
+        .chart-container { display: flex; align-items: flex-end; gap: 8px; height: 200px; padding: 25px 5px 5px 5px; overflow-x: auto; background-color: #0f172a; border-radius: 8px; border: 1px solid var(--border); }
+        .bar-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-width: 40px; height: 100%; }
+        .wai-circle { width: 18px; height: 18px; border-radius: 50%; color: white; font-size: 8px; display: flex; justify-content: center; align-items: center; margin-bottom: 4px; border: 1px solid #94a3b8; font-weight: bold; }
+        .circle-std { background: #475569; } .circle-lim { background: #8b5cf6; } .circle-oshi { background: var(--oshi-color); border-color: #fbcfe8;}
+        .bar-value { font-size: 10px; font-weight: bold; color: white; margin-bottom: 4px; }
+        .bar-fill { width: 25px; border-radius: 4px 4px 0 0; }
+        .bar-label { font-size: 8px; color: var(--text-sub); margin-top: 6px; max-width: 40px; overflow: hidden; text-align: center; }
+
+        /* 歷史紀錄 */
+        .record-card { background-color: #0f172a; border: 1px solid var(--border); padding: 10px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .record-info h4 { margin: 0 0 4px 0; font-size: 13px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; } 
+        .record-info p { margin: 0; font-size: 11px; color: var(--text-sub); display: flex; align-items: center; gap: 4px; flex-wrap: wrap;}
+        .tag { padding: 1px 4px; border-radius: 3px; font-size: 8px; color: white; }
+        .tag-lim { background: var(--limited-color); } .tag-re { background: var(--rerun-color); } .tag-std { background: #475569; } .tag-oshi { background: var(--oshi-color); }
+        .del-btn { background: #ef4444; color: white; border: none; padding: 2px 6px; border-radius: 4px; font-size: 9px; cursor: pointer; margin-left: 5px;}
+        .luck-badge { padding: 4px 8px; border-radius: 12px; font-weight: bold; font-size: 10px; min-width: 45px; text-align: center; }
+        .lead-text { font-weight: bold; margin-right: 4px; display: flex; align-items: center; gap: 2px;}
+        .oshi-heart { color: var(--oshi-color); font-size: 10px;}
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>✨ 戀與深空出金紀錄器</h1>
+    <p class="subtitle">限定與復刻雙軌計算 ‧ 支援主推防歪機制</p>
+
+    <div class="form-group" style="background: rgba(236, 72, 153, 0.05); padding: 12px; border-radius: 8px; border: 1px dashed var(--oshi-color);">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label class="group-label" style="color: #f472b6; margin: 0;" id="oshiSummary">💖 尚未設定主推</label>
+            <button id="oshiToggleBtn" onclick="toggleOshiEdit()" style="background:none; border:none; color:var(--oshi-color); font-size:12px; cursor:pointer; padding:0; font-weight:bold;">[設定]</button>
+        </div>
+        <div id="oshiDetail" style="display: none; margin-top: 8px; font-size: 11px; color: #f472b6;">*若於混池獲得主推的非定向限定卡，系統將視為達成目標並結算總抽數。</div>
+        <div class="radio-group" id="oshiGroup" style="display: flex; margin-top: 10px;">
+            <label class="radio-label oshi-label"><input type="checkbox" name="oshi" value="祁煜" onchange="saveOshis()"> 🐟 祁煜</label>
+            <label class="radio-label oshi-label"><input type="checkbox" name="oshi" value="沈星回" onchange="saveOshis()"> 🌟 沈星回</label>
+            <label class="radio-label oshi-label"><input type="checkbox" name="oshi" value="黎深" onchange="saveOshis()"> 🍐 黎深</label>
+            <label class="radio-label oshi-label"><input type="checkbox" name="oshi" value="秦徹" onchange="saveOshis()"> 🚘 秦徹</label>
+            <label class="radio-label oshi-label"><input type="checkbox" name="oshi" value="夏以晝" onchange="saveOshis()"> 🍎 夏以晝</label>
+        </div>
+    </div>
+
+    <div class="pending-board">
+        <div class="pending-item pending-lim" onclick="editPending('lim')" title="點擊修改數值">限定池已墊 ✏️<span id="pLim">0</span></div>
+        <div class="pending-item pending-re" onclick="editPending('re')" title="點擊修改數值">復刻池已墊 ✏️<span id="pRe">0</span></div>
+    </div>
+
+    <div class="form-group">
+        <label class="group-label">1. 卡池類別</label>
+        <div class="radio-group">
+            <label class="radio-label"><input type="radio" name="mainPool" value="限定" checked onchange="updateOptions()"> 💠 限定池</label>
+            <label class="radio-label"><input type="radio" name="mainPool" value="復刻" onchange="updateOptions()"> 🔄 復刻池</label>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="group-label">2. 卡池機制</label>
+        <div class="radio-group" id="subPoolGroup" onchange="updateOptions()">
+            <label class="radio-label"><input type="radio" name="subPool" value="單人" checked> 👤 單人</label>
+            <label class="radio-label"><input type="radio" name="subPool" value="日卡"> ☀️ 日卡</label>
+            <label class="radio-label"><input type="radio" name="subPool" value="混池"> 👥 混池</label>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="group-label">3. 獲得男主</label>
+        <div class="radio-group">
+            <label class="radio-label"><input type="radio" name="lead" value="祁煜" checked> 🐟 祁煜</label>
+            <label class="radio-label"><input type="radio" name="lead" value="沈星回"> 🌟 沈星回</label>
+            <label class="radio-label"><input type="radio" name="lead" value="黎深"> 🍐 黎深</label>
+            <label class="radio-label"><input type="radio" name="lead" value="秦徹"> 🚘 秦徹</label>
+            <label class="radio-label"><input type="radio" name="lead" value="夏以晝"> 🍎 夏以晝</label>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="group-label">4. 卡池與思念名稱</label>
+        <div style="display: flex; gap: 8px;">
+            <input type="text" id="bannerName" placeholder="卡池名 (如: 煙火來處)" style="flex: 1;">
+            <input type="text" id="cardName" placeholder="思念名 (選填)" style="flex: 1;">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="group-label">5. 出金結果</label>
+        <div class="radio-group" id="resGroup">
+            </div>
+    </div>
+
+    <div class="form-group">
+        <label class="group-label" for="pulls">6. 距離上次出金花費抽數 (1~70)</label>
+        <input type="number" id="pulls" min="1" max="70" required>
+    </div>
+
+    <button class="main-btn" onclick="addRecord()">新增紀錄 📝</button>
+
+    <div class="section-header">📊 血統鑑定與巔峰榜</div>
+    <div class="peak-board" id="peakBoard"></div>
+    <div class="overall-luck-board">
+        <div class="luck-card" id="luckLim"><h5>限定池血統</h5>---</div>
+        <div class="luck-card" id="luckRe"><h5>復刻池血統</h5>---</div>
+    </div>
+    <div id="chartContainer" class="chart-container"></div>
+
+    <div class="section-header">📜 抽卡歷史清單 <button onclick="clearAll()" style="background:none; border:none; color:#ef4444; font-size:11px; cursor:pointer;">清空全部資料</button></div>
+    <div id="recordList"></div>
+</div>
+
+<script>
+    const leadIcons = {'祁煜':'🐟', '沈星回':'🌟', '黎深':'🍐', '秦徹':'🚘', '夏以晝':'🍎'};
+
+    function toggleOshiEdit() {
+        const group = document.getElementById('oshiGroup');
+        const detail = document.getElementById('oshiDetail');
+        const btn = document.getElementById('oshiToggleBtn');
+        if (group.style.display === 'none') {
+            group.style.display = 'flex'; detail.style.display = 'block'; btn.innerText = '[收起]';
+        } else {
+            group.style.display = 'none'; detail.style.display = 'none'; btn.innerText = '[修改]';
+        }
+    }
+
+    function updateOshiSummary(oshis) {
+        const summary = document.getElementById('oshiSummary');
+        if (oshis.length > 0) {
+            const icons = oshis.map(name => leadIcons[name] || '').join('');
+            summary.innerHTML = `💖 主推守護中：${icons} ${oshis.join('、')}`;
+        } else {
+            summary.innerHTML = `💖 尚未設定主推`;
+        }
+    }
+
+    function saveOshis() {
+        const oshis = Array.from(document.querySelectorAll('input[name="oshi"]:checked')).map(cb => cb.value);
+        localStorage.setItem('oshis', JSON.stringify(oshis));
+        updateOshiSummary(oshis);
+    }
+
+    function loadOshisAndInitDisplay() {
+        const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
+        document.querySelectorAll('input[name="oshi"]').forEach(cb => {
+            cb.checked = oshis.includes(cb.value);
+        });
+        const group = document.getElementById('oshiGroup');
+        const detail = document.getElementById('oshiDetail');
+        const btn = document.getElementById('oshiToggleBtn');
+        if (oshis.length > 0) {
+            group.style.display = 'none'; detail.style.display = 'none'; btn.innerText = '[修改]';
+        } else {
+            group.style.display = 'flex'; detail.style.display = 'block'; btn.innerText = '[設定]';
+        }
+        updateOshiSummary(oshis);
+    }
+
+    function updateOptions() {
+        const sub = document.querySelector('input[name="subPool"]:checked').value;
+        const resGroup = document.getElementById('resGroup');
+
+        if (sub === '混池') {
+            resGroup.innerHTML = `
+                <label class="radio-label"><input type="radio" name="res" value="target" checked> 🎯 獲得定向卡</label>
+                <label class="radio-label"><input type="radio" name="res" value="wai_lim"> 🎭 獲得其他限定卡</label>
+                <label class="radio-label"><input type="radio" name="res" value="wai_std"> ㊙️ 獲得常駐卡</label>
+            `;
+        } else {
+            resGroup.innerHTML = `
+                <label class="radio-label"><input type="radio" name="res" value="target" checked> 🎯 獲得當期限定卡</label>
+                <label class="radio-label"><input type="radio" name="res" value="wai_std"> ㊙️ 獲得常駐卡</label>
+            `;
+        }
+    }
+
+    // 單次出金（歪卡）評分
+    const judgeS = (p) => {
+        if (p <= 14) return {t:"超歐 ✨", c:"#4ade80", s:2};
+        if (p <= 28) return {t:"歐 🌟", c:"#a3e635", s:1};
+        if (p <= 38) return {t:"正常 😐", c:"#fb923c", s:-1};
+        if (p <= 52) return {t:"小非 🌧️", c:"#f87171", s:-2};
+        return {t:"超非 🌩️", c:"#ef4444", s:-3};
+    };
+
+    // 獲得目標卡總計評分
+    const judgeT = (p) => {
+        if (p <= 26) return {t:"神級 ✨", c:"#facc15", s:3};
+        if (p <= 52) return {t:"超歐 ✨", c:"#4ade80", s:2};
+        if (p <= 65) return {t:"歐 🌟", c:"#a3e635", s:1};
+        if (p <= 97) return {t:"正常 😐", c:"#fb923c", s:-1};
+        if (p <= 131) return {t:"小非 🌧️", c:"#f87171", s:-2};
+        return {t:"超非 🌩️", c:"#ef4444", s:-3};
+    };
+
+    const getP = (type) => parseInt(localStorage.getItem('p_' + type)) || 0;
+    const setP = (type, v) => { localStorage.setItem('p_' + type, v); renderUI(); };
+
+    function editPending(type) {
+        const v = prompt("手動修改墊池進度：", getP(type));
+        if (v !== null && !isNaN(parseInt(v))) setP(type, parseInt(v));
+    }
+
+    function migrateData() {
+        let db = JSON.parse(localStorage.getItem('db_v21'));
+        if (!db) {
+            const oldDb = JSON.parse(localStorage.getItem('db_v20'));
+            if (oldDb) { localStorage.setItem('db_v21', JSON.stringify(oldDb)); } 
+            else { localStorage.setItem('db_v21', JSON.stringify([])); }
+        }
+    }
+
+    function addRecord() {
+        const main = document.querySelector('input[name="mainPool"]:checked').value;
+        const sub = document.querySelector('input[name="subPool"]:checked').value;
+        const lead = document.querySelector('input[name="lead"]:checked').value;
+        let res = document.querySelector('input[name="res"]:checked').value;
+        const banner = document.getElementById('bannerName').value.trim() || "未填寫名稱";
+        const card = document.getElementById('cardName').value.trim();
+        const pulls = parseInt(document.getElementById('pulls').value);
+
+        if (isNaN(pulls) || pulls < 1 || pulls > 70) return alert("請輸入正確的出金抽數 (1-70抽)！");
+
+        const poolKey = main === '限定' ? 'lim' : 're';
+        let currentP = getP(poolKey);
+        
+        const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
+        const isOshi = oshis.includes(lead);
+
+        if (res === 'wai_lim' && isOshi) {
+            res = 'oshi_lim';
+        }
+
+        let rec = { id: Date.now(), main, sub, lead, banner, card, pulls, res, isOshi };
+
+        if (res === 'target' || res === 'oshi_lim') {
+            rec.total = currentP + pulls;
+            rec.luck = judgeT(rec.total);
+            setP(poolKey, 0); 
+        } else {
+            rec.total = pulls;
+            rec.luck = judgeS(pulls);
+            setP(poolKey, currentP + pulls); 
+        }
+
+        let db = JSON.parse(localStorage.getItem('db_v21')) || [];
+        db.unshift(rec);
+        localStorage.setItem('db_v21', JSON.stringify(db));
+        
+        document.getElementById('cardName').value = '';
+        document.getElementById('pulls').value = '';
+        renderUI();
+    }
+
+    function deleteRec(id) {
+        if (confirm("確定刪除此筆紀錄？")) {
+            let db = JSON.parse(localStorage.getItem('db_v21')) || [];
+            db = db.filter(r => r.id !== id);
+            localStorage.setItem('db_v21', JSON.stringify(db));
+            renderUI();
+        }
+    }
+
+    function renderUI() {
+        document.getElementById('pLim').innerText = getP('lim');
+        document.getElementById('pRe').innerText = getP('re');
+        const db = JSON.parse(localStorage.getItem('db_v21')) || [];
+        const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
+
+        const calcOverall = (filter) => {
+            const items = db.filter(r => r.main === filter && (r.res === 'target' || r.res === 'oshi_lim')); 
+            if (!items.length) return "---";
+            const avg = items.reduce((a,b) => a + b.luck.s, 0) / items.length;
+            if (avg >= 2.0) return '<span class="title-ouhuang">👑 歐皇</span>';
+            if (avg >= 1.0) return '<span class="title-ou">🌟 歐</span>';
+            if (avg >= 0) return '<span class="title-asia">😐 亞洲人</span>';
+            if (avg >= -1.0) return '<span class="title-xiao">🌧️ 小非</span>';
+            return '<span class="title-feiqiu">🌩️ 非酋</span>';
+        };
+        document.getElementById('luckLim').innerHTML = `<h5>限定池血統</h5>${calcOverall('限定')}`;
+        document.getElementById('luckRe').innerHTML = `<h5>復刻池血統</h5>${calcOverall('復刻')}`;
+
+        let peakHTML = '';
+        
+        if (db.length > 0) {
+            const targets = db.filter(r => r.res === 'target' || r.res === 'oshi_lim');
+            if(targets.length > 0){
+                const sortedByLuck = [...targets].sort((a,b) => b.luck.s - a.luck.s || a.total - b.total);
+                const best = sortedByLuck[0];
+                const worst = sortedByLuck[sortedByLuck.length - 1];
+                
+                const bestLeadStr = best.lead ? `${oshis.includes(best.lead)?'💖':''}${leadIcons[best.lead]||''}${best.lead}` : '';
+                const worstLeadStr = worst.lead ? `${oshis.includes(worst.lead)?'💖':''}${leadIcons[worst.lead]||''}${worst.lead}` : '';
+
+                peakHTML += `
+                    <div class="peak-item"><span class="peak-label-best">🏆 最歐紀錄:</span> <span>${bestLeadStr} ${best.banner} (${best.total}抽)</span></div>
+                    <div class="peak-item"><span class="peak-label-worst">💀 最非紀錄:</span> <span>${worstLeadStr} ${worst.banner} (${worst.total}抽)</span></div>
+                `;
+            } else {
+                peakHTML += `<div style="text-align:center;font-size:12px;color:#94a3b8">尚無獲得目標卡之數據</div>`;
+            }
+
+            const waiRecords = db.filter(r => r.res === 'wai_std' || r.res === 'wai_lim');
+            if (waiRecords.length > 0) {
+                let waiCounts = {};
+                waiRecords.forEach(r => {
+                    if (r.lead) waiCounts[r.lead] = (waiCounts[r.lead] || 0) + 1;
+                });
+                let maxCount = 0;
+                let maxLeads = [];
+                for (let lead in waiCounts) {
+                    if (waiCounts[lead] > maxCount) {
+                        maxCount = waiCounts[lead];
+                        maxLeads = [lead];
+                    } else if (waiCounts[lead] === maxCount) {
+                        maxLeads.push(lead);
+                    }
+                }
+                const waiLeadStr = maxLeads.map(l => `${leadIcons[l]||''}${l}`).join('、');
+                peakHTML += `<div class="peak-item" style="margin-top:4px;"><span class="peak-label-spook">💔 歪卡常客:</span> <span>${waiLeadStr} (${maxCount}次)</span></div>`;
+            }
+            document.getElementById('peakBoard').innerHTML = peakHTML;
+
+        } else {
+            document.getElementById('peakBoard').innerHTML = `<div style="text-align:center;font-size:12px;color:#94a3b8">尚無資料</div>`;
+        }
+
+        const chart = document.getElementById('chartContainer');
+        chart.innerHTML = '';
+        [...db].reverse().forEach(r => {
+            const h = (r.pulls / 70) * 100;
+            const wrap = document.createElement('div');
+            wrap.className = 'bar-wrapper';
+            
+            let iconStr = '🎯'; let circleClass = 'circle-lim';
+            if(r.res === 'wai_std') { iconStr = '㊙️'; circleClass = 'circle-std'; }
+            if(r.res === 'wai_lim') { iconStr = '🎭'; circleClass = 'circle-std'; }
+            if(r.res === 'oshi_lim') { iconStr = '💖'; circleClass = 'circle-oshi'; } 
+
+            wrap.innerHTML = `
+                <div class="wai-circle ${circleClass}">${iconStr}</div>
+                <div class="bar-value">${r.pulls}</div>
+                <div class="bar-fill" style="height:${h}%; background:${r.luck.c}"></div>
+                <div class="bar-label">${r.banner.substring(0,2)}..</div>
+            `;
+            chart.appendChild(wrap);
+        });
+
+        document.getElementById('recordList').innerHTML = db.map(r => {
+            const icon = leadIcons[r.lead] || '';
+            const isOshi = oshis.includes(r.lead);
+            const leadStr = r.lead ? `<span class="lead-text">${isOshi?'<span class="oshi-heart">💖</span>':''}${icon} ${r.lead}</span>` : '';
+
+            let statusText = '獲得定向卡'; let tagClass = 'tag-lim';
+            if(r.res === 'target' && r.sub !== '混池') { statusText = '獲得當期限定'; }
+            if(r.res === 'wai_std') { statusText = '獲得常駐卡'; tagClass = 'tag-std'; }
+            if(r.res === 'wai_lim') { statusText = '獲得其他限定'; tagClass = 'tag-std'; }
+            if(r.res === 'oshi_lim') { statusText = '獲得主推限定'; tagClass = 'tag-oshi'; }
+            
+            const cardDisplay = r.card ? ` | ${r.card}` : '';
+
+            return `
+            <div class="record-card">
+                <div class="record-info">
+                    <h4><span class="tag ${r.main==='限定'?'tag-lim':'tag-re'}">${r.main}${r.sub}</span><span class="tag ${tagClass}">${statusText}</span> ${r.banner}</h4>
+                    <p>${leadStr}${cardDisplay} | <b>${r.pulls}抽</b> ${(r.res==='target'||r.res==='oshi_lim')?'(總結算 '+r.total+' 抽)':''} <button class="del-btn" onclick="deleteRec(${r.id})">刪除</button></p>
+                </div>
+                <div class="luck-badge" style="border:1px solid ${r.luck.c}; color:${r.luck.c}">${r.luck.t}</div>
+            </div>
+            `;
+        }).join('');
+    }
+
+    function clearAll() { if(confirm("確定清空所有抽卡資料嗎？此操作無法復原。")) { localStorage.removeItem('db_v21'); renderUI(); } }
+    
+    // 強制重新計算舊紀錄的分數
+    function recalculateOldData() {
+        let db = JSON.parse(localStorage.getItem('db_v21'));
+        if (db) {
+            db.forEach(rec => {
+                if (rec.res === 'target' || rec.res === 'oshi_lim') {
+                    rec.luck = judgeT(rec.total);
+                } else {
+                    rec.luck = judgeS(rec.pulls);
+                }
+            });
+            localStorage.setItem('db_v21', JSON.stringify(db));
+        }
+    }
+    
+    loadOshisAndInitDisplay();
+    migrateData();
+    recalculateOldData(); // 執行重新計分
+    updateOptions(); 
+    renderUI();
+</script>
+</body>
+</html>
