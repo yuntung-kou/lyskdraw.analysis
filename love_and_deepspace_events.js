@@ -23,7 +23,7 @@ const eventCards = [
   {
     year: "2024",
     duration: "2.5-2.19",
-    eventName: "無人知曉時 (情人節)",
+    eventName: "無人知曉時 ",
     poolType: "混池1",
     cards: {
       "沈星回": ["馥情一隅"],
@@ -52,21 +52,12 @@ const eventCards = [
   {
     year: "2024",
     duration: "3.11-3.23",
-    eventName: "眸光映照處 (白情)",
+    eventName: "眸光映照處",
     poolType: "混池2",
     cards: {
       "沈星回": ["午後繾綣"],
       "祁煜": ["唇畔絮語"],
       "黎深": ["此心無間"]
-    }
-  },
-  {
-    year: "2024",
-    duration: "3.26-3.28",
-    eventName: "心動摯禮1-1",
-    poolType: "簽到免五",
-    cards: {
-      "沈星回": ["味蕾突襲"]
     }
   },
   {
@@ -126,7 +117,7 @@ const eventCards = [
   {
     year: "2024",
     duration: "6.25-7.10",
-    eventName: "雙影交疊時 (親親卡)",
+    eventName: "雙影交疊時",
     poolType: "混池3",
     cards: {
       "沈星回": ["二十一日"],
@@ -145,17 +136,8 @@ const eventCards = [
   },
   {
     year: "2024",
-    duration: "7.29-8.13",
-    eventName: "心動摯禮1-2",
-    poolType: "簽到免五",
-    cards: {
-      "祁煜": ["熠熠描摹"]
-    }
-  },
-  {
-    year: "2024",
     duration: "8.7-8.27",
-    eventName: "半透明侵占 (七夕卡)",
+    eventName: "半透明侵占",
     poolType: "混池4",
     cards: {
       "沈星回": ["執迷俘惑"],
@@ -185,7 +167,7 @@ const eventCards = [
   {
     year: "2024",
     duration: "9.23-10.9",
-    eventName: "欲攬旖旎色 (古風卡)",
+    eventName: "欲攬旖旎色",
     poolType: "混池5",
     cards: {
       "沈星回": ["聆花意"],
@@ -224,7 +206,7 @@ const eventCards = [
   {
     year: "2024",
     duration: "11.12-11.30",
-    eventName: "遵命，飼養官 (貓貓卡)",
+    eventName: "遵命，飼養官",
     poolType: "混池6",
     cards: {
       "沈星回": ["茸毛攻勢"],
@@ -253,17 +235,8 @@ const eventCards = [
   },
   {
     year: "2024",
-    duration: "12.18-1.2",
-    eventName: "心動摯禮1-3",
-    poolType: "簽到免五",
-    cards: {
-      "黎深": ["抵此心上"]
-    }
-  },
-  {
-    year: "2024",
     duration: "12.31-1.20",
-    eventName: "奔湧至昨夜盡頭 (一周年熱吻卡)",
+    eventName: "奔湧至昨夜盡頭",
     poolType: "混池7",
     cards: {
       "沈星回": ["霧色勾勒"],
@@ -286,7 +259,7 @@ const eventCards = [
   {
     year: "2025",
     duration: "2.10-2.27",
-    eventName: "明日無處可選 (狼尾)",
+    eventName: "明日無處可選",
     poolType: "混池1",
     cards: {
       "沈星回": ["虛構妄想"],
@@ -321,15 +294,6 @@ const eventCards = [
     poolType: "單人池4-1",
     cards: {
       "黎深": ["願緣長"]
-    }
-  },
-  {
-    year: "2025",
-    duration: "3.12-3.27",
-    eventName: "心動摯禮1-4",
-    poolType: "簽到免五",
-    cards: {
-      "秦徹": ["造物宣示"]
     }
   },
   {
@@ -371,7 +335,7 @@ const eventCards = [
   {
     year: "2025",
     duration: "4.30-5.18",
-    eventName: "春天對花所做的事 (鮮花卡)",
+    eventName: "春天對花所做的事",
     poolType: "混池2",
     cards: {
       "沈星回": ["夕花顯影"],
@@ -420,7 +384,7 @@ const eventCards = [
   {
     year: "2025",
     duration: "7.3-7.22",
-    eventName: "於深空見證的 (婚卡)",
+    eventName: "於深空見證的",
     poolType: "混池3",
     cards: {
       "沈星回": ["星泊地"],
@@ -428,15 +392,6 @@ const eventCards = [
       "黎深": ["渡雪境"],
       "秦徹": ["明暗界"],
       "夏以晝": ["永無島"]
-    }
-  },
-  {
-    year: "2025",
-    duration: "7.12-7.27",
-    eventName: "心動摯禮1-5",
-    poolType: "簽到免五",
-    cards: {
-      "夏以晝": ["槐序"]
     }
   },
   {
@@ -451,7 +406,7 @@ const eventCards = [
   {
     year: "2025",
     duration: "8.12-8.31",
-    eventName: "盛夏與你與海風 (七夕夏日卡)",
+    eventName: "盛夏與你與海風",
     poolType: "混池4",
     cards: {
       "沈星回": ["沁涼瞬擊"],
@@ -491,7 +446,7 @@ const eventCards = [
   {
     year: "2025",
     duration: "9.19-9.27",
-    eventName: "無人知曉時 (情人節)",
+    eventName: "無人知曉時",
     poolType: "復刻混池1",
     cards: {
       "沈星回": ["馥情一隅"],
@@ -538,7 +493,7 @@ const eventCards = [
   {
     year: "2025",
     duration: "10.29-11.18",
-    eventName: "直到心跳沸騰 (舞台卡)",
+    eventName: "直到心跳沸騰",
     poolType: "混池5",
     cards: {
       "沈星回": ["錯拍溯行"],
@@ -586,15 +541,6 @@ const eventCards = [
   },
   {
     year: "2025",
-    duration: "12.18-1.2",
-    eventName: "心動摯禮2-1",
-    poolType: "簽到免五",
-    cards: {
-      "沈星回": ["粲然須臾"]
-    }
-  },
-  {
-    year: "2025",
     duration: "12.18-12.27",
     eventName: "慵懶共謀",
     poolType: "單人池4-5",
@@ -614,7 +560,7 @@ const eventCards = [
   {
     year: "2025",
     duration: "12.31-1.21",
-    eventName: "愛·宇宙·詩王座 (二周年銀河卡)",
+    eventName: "愛·宇宙·詩王座",
     poolType: "混池6",
     cards: {
       "沈星回": ["洄光頌"],
@@ -647,7 +593,7 @@ const eventCards = [
   {
     year: "2026",
     duration: "2.10-2.27",
-    eventName: "人間繾綣意 (古風卡)",
+    eventName: "人間繾綣意",
     poolType: "混池1",
     cards: {
       "沈星回": ["問劍觀花"],
@@ -695,17 +641,8 @@ const eventCards = [
   },
   {
     year: "2026",
-    duration: "3.19-4.3",
-    eventName: "心動摯禮2-2",
-    poolType: "簽到免五",
-    cards: {
-      "祁煜": ["共潮生"]
-    }
-  },
-  {
-    year: "2026",
     duration: "3.19-3.27",
-    eventName: "眸光映照處 (白情)",
+    eventName: "眸光映照處",
     poolType: "復刻混池",
     cards: {
       "沈星回": ["午後繾綣"],
