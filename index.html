@@ -157,6 +157,12 @@
         <input type="number" id="pulls" placeholder="距離上次出金花費抽數" style="width: 100%;" min="1" max="70">
     </div>
 
+    <div class="form-group" style="background: rgba(139, 92, 246, 0.1); padding: 12px; border-radius: 8px; border: 1px dashed var(--primary); margin-bottom: 20px;">
+        <label class="group-label" style="color: #c4b5fd;">📸 自動輔助：上傳抽卡紀錄截圖</label>
+        <input type="file" id="ocrInput" accept="image/*" multiple onchange="handleOCR(event)" style="padding: 5px 0; font-size: 13px; border: none; background: transparent; color: var(--text-sub);">
+        <div id="ocrStatus" style="font-size: 12px; margin-top: 6px; font-weight: bold; color: var(--text-sub);">請上傳抽卡紀錄</div>
+    </div>
+
     <button class="main-btn" onclick="addRecord()">新增紀錄 📝</button>
 
     <div class="section-header" style="margin-top: 30px;">📊 體質鑑定與巔峰榜</div>
@@ -174,8 +180,10 @@
     <div id="recordList"></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="love_and_deepspace_events.js"></script>
 <script src="love_and_deepspace_standard.js"></script>
+<script src="ocr_parser.js"></script>
 
 <script>
     const leadIcons = {'祁煜':'🐟', '沈星回':'🌟', '黎深':'🍐', '秦徹':'🚘', '夏以晝':'🍎'};
@@ -272,7 +280,8 @@
         updatePulledCardList();        
     }
 
-    function autoFillFromUpCard() {
+    // 將這個函式掛載在 window 下，方便 OCR 取用
+    window.autoFillFromUpCard = function() {
         const upCardName = document.getElementById('upCardName').value;
         if (!upCardName || typeof eventCards === 'undefined') return;
         
@@ -282,11 +291,11 @@
         
         if (event) {
             document.getElementById('bannerName').value = event.eventName;
-            autoFillBannerInfo(); 
+            window.autoFillBannerInfo(); 
         }
     }
 
-    function autoFillBannerInfo() {
+    window.autoFillBannerInfo = function() {
         const bannerName = document.getElementById('bannerName').value;
         if (typeof eventCards === 'undefined') return;
         const event = eventCards.find(e => e.eventName === bannerName);
@@ -308,8 +317,8 @@
         onPoolChange();
     }
 
-    // 🏆 核心優化：更新獲得男主卡名，限定卡優先顯示
-    function updatePulledCardList() {
+    // 將這個函式掛載在 window 下，方便 OCR 取用
+    window.updatePulledCardList = function() {
         const bannerName = document.getElementById('bannerName').value;
         const pulledLead = document.querySelector('input[name="pulledLead"]:checked').value;
         const list = document.getElementById('pulledCardList');
@@ -317,7 +326,6 @@
         
         let options = new Set();
         
-        // 1. 先加入該卡池的限定卡 (排在最前面)
         if (bannerName && typeof eventCards !== 'undefined') {
             const event = eventCards.find(e => e.eventName === bannerName);
             if (event && event.cards[pulledLead]) {
@@ -325,7 +333,6 @@
             }
         }
 
-        // 2. 再加入常駐卡 (排在後面)
         if (typeof standardCards !== 'undefined' && standardCards[pulledLead]) {
             standardCards[pulledLead].forEach(c => options.add(c));
         }
@@ -425,6 +432,12 @@
         
         document.getElementById('cardName').value = '';
         document.getElementById('pulls').value = '';
+        
+        // 為了方便連續輸入，重置上傳檔案欄位
+        document.getElementById('ocrInput').value = '';
+        document.getElementById('ocrStatus').innerText = "請上傳抽卡紀錄";
+        document.getElementById('ocrStatus').style.color = "var(--text-sub)";
+
         renderUI();
     }
 
