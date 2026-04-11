@@ -1,18 +1,7 @@
 // ════════════════════════════════════════════════════════════
 //  app.js — 戀與深空抽卡分析器 主邏輯
-//
-//  依賴（需在 index.html 中 app.js 之前載入）：
-//    - love_and_deepspace_events.js   → eventCards 陣列
-//    - love_and_deepspace_standard.js → standardCards 物件
-//    - ocr_parser.js                  → handleOCR()
 // ════════════════════════════════════════════════════════════
 
-
-// ────────────────────────────────────────────────────────────
-//  § 常數與資料工具
-// ────────────────────────────────────────────────────────────
-
-// 各攻略角色對應的 emoji 圖示
 const leadIcons = {
     '祁煜': '🐟',
     '沈星回': '🌟',
@@ -25,11 +14,6 @@ const getDB  = () => JSON.parse(localStorage.getItem('db_v4')) || [];
 const setDB  = (db) => localStorage.setItem('db_v4', JSON.stringify(db));
 const getP   = (type) => parseInt(localStorage.getItem('p_' + type)) || 0;
 const setP   = (type, v) => { localStorage.setItem('p_' + type, v); renderUI(); };
-
-
-// ────────────────────────────────────────────────────────────
-//  § 深淺色主題
-// ────────────────────────────────────────────────────────────
 
 function initTheme() {
     let saved = localStorage.getItem('theme');
@@ -47,11 +31,6 @@ function toggleTheme() {
     localStorage.setItem('theme', next);
     document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
 }
-
-
-// ────────────────────────────────────────────────────────────
-//  § 主推（Oshi）管理
-// ────────────────────────────────────────────────────────────
 
 function toggleOshiEdit() {
     const group = document.getElementById('oshiGroup');
@@ -87,11 +66,6 @@ function loadOshis() {
     updateOshiSummary();
 }
 
-
-// ────────────────────────────────────────────────────────────
-//  § 卡池事件資料初始化
-// ────────────────────────────────────────────────────────────
-
 function parseEventTime(e) {
     try {
         const startStr = e.duration.split('-')[0];
@@ -103,26 +77,20 @@ function parseEventTime(e) {
     }
 }
 
+// 💡 修正：初始化時統一交給 onPoolChange 處理下拉選單資料
 function initEventData() {
     if (typeof eventCards === 'undefined') return;
-
-    const cardsWithTime = eventCards.flatMap(e => {
-        const t = parseEventTime(e);
-        return Object.values(e.cards).flat().map(c => ({ name: c, time: t }));
-    });
-    cardsWithTime.sort((a, b) => b.time - a.time);
-    dropdownData.upCardName = [...new Set(cardsWithTime.map(c => c.name))];
-
     onPoolChange();
 }
 
+// 💡 修正：依目前選擇的「主池類型」與「子池類型」過濾可選的卡池名稱與反查卡名
 function updateBannerRecommendations() {
     if (typeof eventCards === 'undefined') return;
 
     const mainPool = document.querySelector('input[name="mainPool"]:checked').value;
     const subPool  = document.querySelector('input[name="subPool"]:checked').value;
 
-    let filtered = [];
+    let filteredEvents = [];
     eventCards.forEach(e => {
         const isRerun = e.poolType.includes('復刻');
 
@@ -139,22 +107,20 @@ function updateBannerRecommendations() {
             e.poolType === '復刻'
         )) matchSub = true;
 
-        if (matchSub) filtered.push({ name: e.eventName, time: parseEventTime(e) });
+        if (matchSub) filteredEvents.push({ event: e, time: parseEventTime(e) });
     });
 
-    filtered.sort((a, b) => b.time - a.time);
-    dropdownData.bannerName = [...new Set(filtered.map(f => f.name))];
+    filteredEvents.sort((a, b) => b.time - a.time);
+    
+    dropdownData.bannerName = [...new Set(filteredEvents.map(f => f.event.eventName))];
+    // 💡 同步更新反查卡名清單，確保不出現被過濾掉的卡名
+    dropdownData.upCardName = [...new Set(filteredEvents.flatMap(f => Object.values(f.event.cards).flat()))];
 }
 
 function onPoolChange() {
     updateBannerRecommendations();
     updatePulledCardList();
 }
-
-
-// ────────────────────────────────────────────────────────────
-//  § 自動完成下拉選單
-// ────────────────────────────────────────────────────────────
 
 let dropdownData = {
     bannerName: [],
@@ -199,11 +165,6 @@ function hideDropdownDelayed(inputId) {
         if (wrapper) wrapper.style.display = 'none';
     }, 150);
 }
-
-
-// ────────────────────────────────────────────────────────────
-//  § 自動填入（卡池資訊互查）
-// ────────────────────────────────────────────────────────────
 
 window.autoFillFromUpCard = function() {
     const upCardName = document.getElementById('upCardName').value;
@@ -279,11 +240,6 @@ window.updatePulledCardList = function() {
     dropdownData.cardName = Array.from(new Set(options));
 };
 
-
-// ────────────────────────────────────────────────────────────
-//  § 幸運判定
-// ────────────────────────────────────────────────────────────
-
 const judgeS = (p) => {
     if (p <=  7) return { t: '天選之子 ✨', c: '#16a34a', s:  2 };
     if (p <= 24) return { t: '幸運兒 🌟',   c: '#4ade80', s:  1 };
@@ -300,20 +256,10 @@ const judgeT = (p) => {
     return              { t: '小倒霉鬼 🌩️', c: '#dc2626', s: -2 };
 };
 
-
-// ────────────────────────────────────────────────────────────
-//  § 墊抽管理
-// ────────────────────────────────────────────────────────────
-
 function editPending(type) {
     const v = prompt('手動修改『已墊抽數』\n(請輸入您目前已經墊了幾抽，0~139)：', getP(type));
     if (v !== null && !isNaN(parseInt(v))) setP(type, parseInt(v));
 }
-
-
-// ────────────────────────────────────────────────────────────
-//  § 紀錄 CRUD（新增 / 刪除 / 清空）
-// ────────────────────────────────────────────────────────────
 
 function addRecord() {
     const banner     = document.getElementById('bannerName').value.trim();
@@ -389,11 +335,6 @@ function clearAll() {
     localStorage.removeItem('p_re');
     renderUI();
 }
-
-
-// ────────────────────────────────────────────────────────────
-//  § UI 渲染
-// ────────────────────────────────────────────────────────────
 
 function getEventDate(eventName, mainPool) {
     if (typeof eventCards === 'undefined') return 0;
@@ -509,23 +450,17 @@ function renderUI() {
         
         const barWidth = Math.min((r.pulls / 70) * 100, 100);
 
-        // 💡 針對大於 55 抽的項目，給予 luck-high class
         const luckClass = r.pulls > 55 ? 'luck-high' : 'luck-low';
         
-        // 💡 新增：判斷淺色模式下是否需要改為黑字
         let isBlackText = false;
-        // 條件一：平凡人、小不幸運、小倒霉鬼 (s <= 0) 且 未達62抽 (< 62)
         if (r.luck.s <= 0 && r.pulls < 62) {
             isBlackText = true;
         } 
-        // 條件二：幸運兒 (s === 1) 且 55~62抽 (>= 55 且 <= 62)
         else if (r.luck.s === 1 && r.pulls >= 55 && r.pulls <= 62) {
             isBlackText = true;
         }
         
         const fullLuckClass = `h-luck ${luckClass} ${isBlackText ? 'luck-black-light' : ''}`;
-        
-        // 確保給予行內白字樣式，若需黑字則透過 CSS 的 !important 覆蓋
         const luckInlineStyle = r.pulls <= 55 ? `background-color: ${r.luck.c}BF; color: #ffffff;` : '';
 
         return `
@@ -555,10 +490,6 @@ function renderUI() {
     }).join('');
 }
 
-
-// ────────────────────────────────────────────────────────────
-//  § 頁面啟動入口
-// ────────────────────────────────────────────────────────────
 initTheme();
 loadOshis();
 initEventData();
