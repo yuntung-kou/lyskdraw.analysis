@@ -45,9 +45,8 @@ body {
     transition: background-color 0.3s, color 0.3s;
 }
 
-/* 為了容納雙欄，將 max-width 加寬至 1000px */
 .container {
-    max-width: 1000px; 
+    max-width: 1000px;
     width: 100%;
     background-color: var(--card-bg);
     padding: 25px;
@@ -366,7 +365,6 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 .h-title { display: flex; align-items: baseline; gap: 6px; }
 .h-pulls { font-size: 12px; color: var(--text-main); display: flex; align-items: baseline; justify-content: flex-end; width: 45px; gap: 3px; }
 .pull-num { font-size: 18px; font-weight: bold; }
-.h-luck { font-size: 12px; font-weight: normal; color: var(--text-main); padding: 4px 0; border-radius: 6px; width: 85px; text-align: center; box-sizing: border-box; }
 .del-btn-icon { background: transparent; border: none; font-size: 14px; cursor: pointer; padding: 4px; opacity: 0.5; transition: 0.2s; width: 28px; text-align: center; }
 .del-btn-icon:hover { opacity: 1; color: #ef4444; }
 
@@ -376,3 +374,28 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
 .title-plain   { color: #facc15; font-weight: bold; }
 .title-unlucky { color: #fb923c; font-weight: bold; }
 .title-bad     { color: #dc2626; font-weight: bold; }
+
+/* ════════════════════════════════════════════
+   💡 體質標籤特定樣式 (> 55 抽的專屬設定)
+   ════════════════════════════════════════════ */
+.h-luck {
+    font-size: 12px;
+    font-weight: normal;
+    padding: 4px 0;
+    border-radius: 6px;
+    width: 85px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+/* 深色模式：大於 55 抽的預設樣式 (半透明黑底，純白字) */
+.h-luck.luck-high {
+    background-color: rgba(0, 0, 0, 0.3);
+    color: #ffffff;
+}
+
+/* 淺色模式：大於 55 抽的特製樣式 (#F0F0F0 70% 透明度，純白字) */
+[data-theme="light"] .h-luck.luck-high {
+    background-color: rgba(240, 240, 240, 0.7); 
+    color: #ffffff;
+}
