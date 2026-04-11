@@ -394,8 +394,13 @@ input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var
     color: #ffffff;
 }
 
-/* 淺色模式：大於 55 抽的特製樣式 (#F0F0F0 30% 透明度，純白字) */
+/* 淺色模式：大於 55 抽的特製樣式 (#F0F0F0 50% 透明度) */
 [data-theme="light"] .h-luck.luck-high {
-    background-color: rgba(240, 240, 240, 0.3); 
+    background-color: rgba(240, 240, 240, 0.5); 
     color: #ffffff;
+}
+
+/* 💡 淺色模式特定條件：字體改為深黑色（覆蓋前面所有的白字設定） */
+[data-theme="light"] .h-luck.luck-black-light {
+    color: #0f172a !important; 
 }
