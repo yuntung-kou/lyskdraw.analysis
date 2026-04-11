@@ -32,11 +32,6 @@
                 </div>
             </div>
 
-            <div class="pending-board">
-                <div class="pending-item pending-lim" onclick="editPending('lim')">限定池必出UP ✏️<span id="pLim">140</span></div>
-                <div class="pending-item pending-re" onclick="editPending('re')">復刻池必出UP ✏️<span id="pRe">140</span></div>
-            </div>
-
             <div class="form-group ocr-box">
                 <label class="group-label" style="color: var(--title-color);">📸 自動輔助：上傳抽卡紀錄截圖</label>
                 <input type="file" id="ocrInput" accept="image/*" multiple onchange="handleOCR(event)" style="padding: 5px 0; font-size: 13px; border: none; background: transparent; color: var(--text-sub);">
@@ -100,6 +95,12 @@
 
         <div class="right-col">
             <div class="section-header">📊 體質鑑定與巔峰榜</div>
+
+            <div class="pending-board">
+                <div class="pending-item pending-lim" onclick="editPending('lim')">限定池必出UP ✏️<span id="pLim">140</span></div>
+                <div class="pending-item pending-re" onclick="editPending('re')">復刻池必出UP ✏️<span id="pRe">140</span></div>
+            </div>
+
             <div class="peak-board" id="peakBoard"></div>
 
             <div class="overall-luck-board">
