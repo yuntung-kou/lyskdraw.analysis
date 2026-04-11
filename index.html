@@ -57,15 +57,18 @@
         /* 統計面板 */
         .section-header { font-size: 16px; border-bottom: 2px solid var(--border); padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; margin-top: 25px; }
         .overall-luck-board { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .luck-card { background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid var(--border); text-align: center; }
-        .luck-card h5 { margin: 0 0 8px 0; font-size: 12px; color: var(--text-sub); }
+        .luck-card { background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid var(--border); text-align: center; display: flex; flex-direction: column; align-items: center;}
         
+        /* 動態下拉選單樣式 */
+        .luck-select { background: transparent; border: 1px solid var(--border); color: var(--text-sub); border-radius: 4px; padding: 2px 4px; font-size: 12px; font-weight: bold; outline: none; cursor: pointer; text-align: center; margin-bottom: 8px; width: 100%;}
+        .luck-select option { background: var(--card-bg); color: white; }
+
         /* 巔峰榜 */
         .peak-board { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 12px; border-radius: 8px; border: 1px solid #4ade8055; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px;}
         .peak-item { display: flex; justify-content: space-between; font-size: 13px; font-weight: bold;}
         .peak-label-best { color: #4ade80; } .peak-label-spook { color: #ef4444; }
 
-        /* 單行橫向長條圖 */
+        /* 橫向長條圖 */
         .h-record-card { 
             position: relative; 
             background: #1e293b; 
@@ -104,7 +107,7 @@
         .h-right { 
             display: flex; 
             align-items: center; 
-            gap: 8px; /* 固定距離 */
+            gap: 8px; 
             flex-shrink: 0; 
         }
         .h-date { 
@@ -112,33 +115,42 @@
             color: white;
             font-family: monospace;
         }
+
+        /* 統一標籤樣式與對齊 */
         .h-tags { 
             display: flex; 
             gap: 4px; 
+            align-items: center;
         }
         .tag { 
-            padding: 3px 6px; 
+            padding: 0 6px; 
+            height: 20px; 
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             border-radius: 4px; 
             font-size: 11px; 
             color: white; 
             font-weight: bold;
+            box-sizing: border-box;
+            white-space: nowrap;
         }
         .tag-lim { background: var(--limited-color); } 
         .tag-re { background: var(--rerun-color); }
+        
         .h-title { 
             display: flex;
             align-items: baseline;
             gap: 6px;
         }
         
-        /* 💡 右側排版嚴格對齊設定 */
         .h-pulls { 
             font-size: 12px; 
             color: white; 
             display: flex;
             align-items: baseline;
-            justify-content: flex-end; /* 抽數靠右對齊 */
-            width: 45px; /* 固定抽數區塊寬度 */
+            justify-content: flex-end; 
+            width: 45px; 
             gap: 3px;
         }
         .pull-num { 
@@ -147,12 +159,12 @@
         }
         .h-luck {
             font-size: 12px;
-            font-weight: normal;
+            font-weight: normal; 
             color: white;
             padding: 4px 0;
             border-radius: 6px;
-            width: 85px; /* 固定寬度，剛好容納四個字加圖標 */
-            text-align: center; /* 不足四個字時自動置中 */
+            width: 85px; 
+            text-align: center; 
             box-sizing: border-box;
         }
         .del-btn-icon { 
@@ -163,7 +175,7 @@
             padding: 4px; 
             opacity: 0.5; 
             transition: 0.2s; 
-            width: 28px; /* 固定刪除按鈕寬度 */
+            width: 28px; 
             text-align: center;
         }
         .del-btn-icon:hover { opacity: 1; color: #ef4444; }
@@ -260,8 +272,22 @@
     <div class="peak-board" id="peakBoard"></div>
     
     <div class="overall-luck-board">
-        <div class="luck-card" id="luckLim"><h5>限定池體質</h5>---</div>
-        <div class="luck-card" id="luckRe"><h5>復刻池體質</h5>---</div>
+        <div class="luck-card">
+            <select id="mainPoolLuckSelect" class="luck-select" onchange="updateLuckStats()">
+                <option value="綜合">綜合體質</option>
+                <option value="限定" selected>限定池體質</option>
+                <option value="復刻">復刻池體質</option>
+            </select>
+            <div id="luckMainVal">---</div>
+        </div>
+        <div class="luck-card">
+            <select id="subPoolLuckSelect" class="luck-select" onchange="updateLuckStats()">
+                <option value="單人" selected>單人池體質</option>
+                <option value="日卡">日卡池體質</option>
+                <option value="混池">混池體質</option>
+            </select>
+            <div id="luckSubVal">---</div>
+        </div>
     </div>
 
     <div class="section-header">📊 抽卡紀錄與長條圖 <button onclick="clearAll()" style="background:none; border:none; color:#ef4444; font-size:11px; cursor:pointer;">清空</button></div>
@@ -545,11 +571,20 @@
         const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
         const event = typeof eventCards !== 'undefined' ? eventCards.find(e => e.eventName === banner) : null;
         
-        let judgeResult = 'wai'; 
+        let isUpCard = false; 
         if (event && event.cards[pulledLead] && (!card || event.cards[pulledLead].includes(card))) {
-            judgeResult = 'target';
-        } else if (oshis.includes(pulledLead)) {
-            judgeResult = 'oshi_spook';
+            isUpCard = true;
+        }
+
+        let judgeResult = 'wai_std';
+        if (isUpCard) {
+            if (sub === '混池' && oshis.length > 0 && !oshis.includes(pulledLead)) {
+                judgeResult = 'wai_lim'; 
+            } else {
+                judgeResult = 'target'; 
+            }
+        } else {
+            judgeResult = 'wai_std'; 
         }
 
         const poolKey = main === '限定' ? 'lim' : 're';
@@ -590,6 +625,34 @@
         }
     }
 
+    // 💡 動態更新體質鑑定面板
+    window.updateLuckStats = function() {
+        let db = getDB();
+        const mainFilter = document.getElementById('mainPoolLuckSelect').value;
+        const subFilter = document.getElementById('subPoolLuckSelect').value;
+
+        const calcOverall = (items) => {
+            if (!items.length) return "---";
+            const avg = items.reduce((a,b) => a + b.luck.s, 0) / items.length;
+            if (avg >= 1.5) return '<span class="title-god">✨ 天選之子</span>';
+            if (avg >= 0.5) return '<span class="title-lucky">🌟 幸運兒</span>';
+            if (avg >= -0.5) return '<span class="title-plain">😐 平凡人</span>';
+            if (avg >= -1.5) return '<span class="title-unlucky">🌧️ 小不幸運</span>';
+            return '<span class="title-bad">🌩️ 小倒霉鬼</span>';
+        };
+
+        // 更新左邊卡池種類面板
+        let mainItems = db.filter(r => r.res === 'target');
+        if (mainFilter !== '綜合') {
+            mainItems = mainItems.filter(r => r.main === mainFilter);
+        }
+        document.getElementById('luckMainVal').innerHTML = calcOverall(mainItems);
+
+        // 更新右邊思念種類面板
+        let subItems = db.filter(r => r.res === 'target' && r.sub === subFilter);
+        document.getElementById('luckSubVal').innerHTML = calcOverall(subItems);
+    };
+
     function renderUI() {
         document.getElementById('pLim').innerText = 140 - getP('lim');
         document.getElementById('pRe').innerText = 140 - getP('re');
@@ -604,18 +667,8 @@
         });
         db.sort((a, b) => b._sortTime - a._sortTime || b._entryOrder - a._entryOrder);
 
-        const calcOverall = (filter) => {
-            const items = db.filter(r => r.main === filter && r.res === 'target'); 
-            if (!items.length) return "---";
-            const avg = items.reduce((a,b) => a + b.luck.s, 0) / items.length;
-            if (avg >= 1.5) return '<span class="title-god">✨ 天選之子</span>';
-            if (avg >= 0.5) return '<span class="title-lucky">🌟 幸運兒</span>';
-            if (avg >= -0.5) return '<span class="title-plain">😐 平凡人</span>';
-            if (avg >= -1.5) return '<span class="title-unlucky">🌧️ 小不幸運</span>';
-            return '<span class="title-bad">🌩️ 小倒霉鬼</span>';
-        };
-        document.getElementById('luckLim').innerHTML = `<h5>限定池體質</h5>${calcOverall('限定')}`;
-        document.getElementById('luckRe').innerHTML = `<h5>復刻池體質</h5>${calcOverall('復刻')}`;
+        // 更新動態體質面板
+        updateLuckStats();
 
         let peakHTML = '';
         if (db.length > 0) {
@@ -626,7 +679,7 @@
                 peakHTML += `<div class="peak-item"><span class="peak-label-best">🏆 巔峰紀錄:</span> <span>${bestLeadStr} ${best.banner} (${best.total}抽)</span></div>`;
             }
 
-            const waiRecords = db.filter(r => r.res === 'wai');
+            const waiRecords = db.filter(r => r.res === 'wai_std' || r.res === 'wai_lim' || r.res === 'wai' || r.res === 'oshi_spook');
             if (waiRecords.length > 0) {
                 let counts = {};
                 waiRecords.forEach(r => counts[r.lead] = (counts[r.lead] || 0) + 1);
@@ -647,29 +700,28 @@
             let cardTypeStr = '';
             let statusColor = '#94a3b8';
 
+            // 💡 渲染標籤邏輯更新：統一顯示「🎯 限定」
             if (r.res === 'target') {
-                cardTypeStr = '🎯 限定 UP';
+                cardTypeStr = '🎯 限定';
                 statusColor = 'var(--primary)';
+            } else if (r.res === 'wai_lim') {
+                cardTypeStr = '💔 限定';
+                statusColor = '#ef4444';
             } else {
-                let isStandard = false;
-                if (typeof standardCards !== 'undefined' && standardCards[r.lead] && standardCards[r.lead].includes(r.card)) {
-                    isStandard = true;
+                let isUpCard = false;
+                if (typeof eventCards !== 'undefined') {
+                    const ev = eventCards.find(e => e.eventName === r.banner);
+                    if (ev && ev.cards[r.lead] && (!r.card || ev.cards[r.lead].includes(r.card))) {
+                        isUpCard = true;
+                    }
                 }
                 
-                if (isStandard) {
-                    cardTypeStr = '💔 歪常駐';
-                    statusColor = '#475569';
-                } else if (r.sub === '混池') {
-                    cardTypeStr = '💔 歪其他限定';
+                if ((r.res === 'wai' || r.res === 'oshi_spook') && isUpCard) {
+                    cardTypeStr = '💔 限定';
                     statusColor = '#ef4444';
                 } else {
-                    cardTypeStr = '💔 歪卡';
-                    statusColor = '#ef4444';
-                }
-
-                if (r.res === 'oshi_spook') {
-                    cardTypeStr = '💖 防歪主推 (' + cardTypeStr.replace('💔 ', '') + ')';
-                    statusColor = 'var(--oshi-color)';
+                    cardTypeStr = '☠️ 常駐';
+                    statusColor = '#475569';
                 }
             }
 
@@ -677,7 +729,6 @@
             const dateStr = r._sortTime !== r.id ? `[${d.getFullYear().toString().slice(2)}/${(d.getMonth()+1).toString().padStart(2,'0')}]` : '[未知]';
             const barWidth = Math.min((r.pulls / 70) * 100, 100);
 
-            // 💡 體質動態底色邏輯
             let luckBgStyle = 'rgba(0,0,0,0.3)';
             if (r.pulls <= 55) {
                 luckBgStyle = r.luck.c + 'BF'; 
