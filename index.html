@@ -40,7 +40,8 @@
         .container { max-width: 600px; width: 100%; background-color: var(--card-bg); padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 1px solid var(--border); transition: background-color 0.3s; }
         
         .title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-        h1 { text-align: center; color: #c4b5fd; margin: 0; font-size: 22px; flex-grow: 1; margin-left: 20px;}
+        /* 主標題放大為 24px */
+        h1 { text-align: center; color: #c4b5fd; margin: 0; font-size: 24px; flex-grow: 1; margin-left: 20px;}
         [data-theme="light"] h1 { color: #db2777; }
         .theme-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 0; }
         
@@ -88,9 +89,33 @@
         .overall-luck-board { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         .luck-card { background: var(--input-bg); padding: 12px; border-radius: 8px; border: 1px solid var(--border); text-align: center; display: flex; flex-direction: column; align-items: center;}
         
-        /* 動態下拉選單樣式 */
-        .luck-select { background: transparent; border: 1px solid var(--border); color: var(--text-sub); border-radius: 4px; padding: 2px 4px; font-size: 12px; font-weight: bold; outline: none; cursor: pointer; text-align: center; margin-bottom: 8px; width: 100%;}
-        .luck-select option { background: var(--card-bg); color: var(--text-main); }
+        /* 動態下拉選單樣式 (美化) */
+        .luck-select { 
+            width: 100%; 
+            padding: 10px; 
+            background-color: var(--input-bg); 
+            border: 1px solid var(--border); 
+            color: var(--text-main); 
+            border-radius: 8px; 
+            box-sizing: border-box; 
+            font-size: 14px; 
+            font-weight: bold; 
+            outline: none; 
+            cursor: pointer; 
+            margin-bottom: 12px;
+            appearance: none;
+            -webkit-appearance: none;
+            /* 自訂下拉箭頭 (深色模式紫色) */
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%238b5cf6%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 16px;
+        }
+        /* 淺色模式下箭頭改為深粉色 */
+        [data-theme="light"] .luck-select {
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23db2777%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
+        }
+        .luck-select option { background: var(--card-bg); color: var(--text-main); font-weight: normal; }
 
         /* 巔峰榜 */
         .peak-board { background: linear-gradient(135deg, var(--card-bg) 0%, var(--input-bg) 100%); padding: 12px; border-radius: 8px; border: 1px solid #4ade8055; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px;}
@@ -217,7 +242,7 @@
         <h1>✨ 抽卡紀錄分析器</h1>
         <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">☀️</button>
     </div>
-    <p class="subtitle">支援主推防歪與體質鑑定</p>
+    <p class="subtitle">抽卡體質鑑定🙌</p>
 
     <div class="oshi-box">
         <div class="oshi-header">
@@ -310,7 +335,7 @@
                 <option value="限定" selected>限定池體質</option>
                 <option value="復刻">復刻池體質</option>
             </select>
-            <div id="luckMainVal">---</div>
+            <div id="luckMainVal" style="font-weight: bold;">---</div>
         </div>
         <div class="luck-card">
             <select id="subPoolLuckSelect" class="luck-select" onchange="updateLuckStats()">
@@ -318,7 +343,7 @@
                 <option value="日卡">日卡池體質</option>
                 <option value="混池">混池體質</option>
             </select>
-            <div id="luckSubVal">---</div>
+            <div id="luckSubVal" style="font-weight: bold;">---</div>
         </div>
     </div>
 
