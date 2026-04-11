@@ -6,72 +6,101 @@
     <title>戀與深空 | 抽卡紀錄分析器</title>
     <style>
         :root {
-            --bg-color: #0f172a; --card-bg: #1e293b; --primary: #8b5cf6;
-            --primary-hover: #7c3aed; --text-main: #f8fafc; --text-sub: #cbd5e1;
-            --border: #334155; --limited-color: #3b82f6; --rerun-color: #ec4899;
-            --oshi-color: #ec4899; 
+            /* 深色模式 (預設) */
+            --bg-color: #0f172a; 
+            --card-bg: #1e293b; 
+            --input-bg: #0f172a;
+            --primary: #8b5cf6;         /* 紫色 */
+            --primary-hover: #7c3aed; 
+            --text-main: #f8fafc; 
+            --text-sub: #cbd5e1;
+            --border: #334155; 
+            --limited-color: #3b82f6; 
+            --rerun-color: #ec4899;     /* 粉色 */
+            --oshi-color: #ec4899;      /* 粉色 */
         }
 
-        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 15px; display: flex; justify-content: center; }
-        .container { max-width: 600px; width: 100%; background-color: var(--card-bg); padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid var(--border); }
-        h1 { text-align: center; color: #c4b5fd; margin-bottom: 5px; font-size: 22px; }
-        p.subtitle { text-align: center; color: var(--text-sub); font-size: 13px; margin-bottom: 20px; }
+        [data-theme="light"] {
+            /* 淺色模式 */
+            --bg-color: #f1f5f9;      
+            --card-bg: #ffffff;       
+            --input-bg: #f8fafc;
+            --text-main: #0f172a;     
+            --text-sub: #475569;
+            --border: #e2e8f0; 
+            /* 紫色改深粉色 */
+            --primary: #db2777;       
+            --primary-hover: #be185d; 
+            /* 粉色改淺紫色 */
+            --rerun-color: #a855f7;   
+            --oshi-color: #a855f7;    
+        }
+
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 15px; display: flex; justify-content: center; transition: background-color 0.3s, color 0.3s; }
+        .container { max-width: 600px; width: 100%; background-color: var(--card-bg); padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 1px solid var(--border); transition: background-color 0.3s; }
+        
+        .title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        h1 { text-align: center; color: #c4b5fd; margin: 0; font-size: 22px; flex-grow: 1; margin-left: 20px;}
+        [data-theme="light"] h1 { color: #db2777; }
+        .theme-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 0; }
+        
+        p.subtitle { text-align: center; color: var(--text-sub); font-size: 13px; margin-bottom: 20px; margin-top: 5px; }
         
         /* 主推面板 */
-        .oshi-box { background: rgba(236, 72, 153, 0.05); padding: 12px; border-radius: 8px; border: 1px dashed var(--oshi-color); margin-bottom: 16px; }
+        .oshi-box { background: rgba(139, 92, 246, 0.05); padding: 12px; border-radius: 8px; border: 1px dashed var(--oshi-color); margin-bottom: 16px; }
         .oshi-header { display: flex; justify-content: space-between; align-items: center; }
-        .oshi-header label { color: #f472b6; margin: 0; font-size: 13px; font-weight: bold; }
+        .oshi-header label { color: var(--oshi-color); margin: 0; font-size: 13px; font-weight: bold; }
         
         /* 墊池面板 */
-        .pending-board { display: flex; justify-content: space-between; background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; font-size: 12px; font-weight: bold; }
+        .pending-board { display: flex; justify-content: space-between; background: var(--input-bg); padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; font-size: 12px; font-weight: bold; }
         .pending-item { cursor: pointer; padding: 4px; border-radius: 6px; transition: 0.2s; flex: 1; text-align: center;}
-        .pending-item:hover { background: rgba(255,255,255,0.05); }
-        .pending-item span { font-size: 16px; color: white; display: block; margin-top: 4px;}
+        .pending-item:hover { background: rgba(139, 92, 246, 0.05); }
+        .pending-item span { font-size: 16px; color: var(--text-main); display: block; margin-top: 4px;}
         .pending-lim { color: var(--limited-color); border-right: 1px solid var(--border); } .pending-re { color: var(--rerun-color); }
 
         /* 表單樣式 */
         .form-group { margin-bottom: 16px; }
-        label.group-label { display: block; margin-bottom: 6px; font-size: 13px; color: #e2e8f0; font-weight: bold; }
+        label.group-label { display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-sub); font-weight: bold; }
         
-        input[type="text"], input[type="number"] { width: 100%; padding: 10px; background-color: #0f172a; border: 1px solid var(--border); color: white; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
+        input[type="text"], input[type="number"] { width: 100%; padding: 10px; background-color: var(--input-bg); border: 1px solid var(--border); color: var(--text-main); border-radius: 8px; box-sizing: border-box; font-size: 14px; }
         input::-webkit-calendar-picker-indicator { display: none !important; }
         
         .radio-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-        .radio-label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; background: #0f172a; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); transition: 0.2s;}
+        .radio-label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; background: var(--input-bg); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); transition: 0.2s;}
         .radio-label:hover { border-color: var(--primary); background: rgba(139, 92, 246, 0.1); }
         input[type="radio"], input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var(--primary); cursor: pointer; }
         
         .oshi-label input[type="checkbox"] { accent-color: var(--oshi-color); }
-        .oshi-label:hover { border-color: var(--oshi-color); background: rgba(236, 72, 153, 0.1); }
+        .oshi-label:hover { border-color: var(--oshi-color); background: rgba(139, 92, 246, 0.05); }
 
         .main-btn { width: 100%; padding: 12px; background-color: var(--primary); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
         .main-btn:hover { background-color: var(--primary-hover); }
         
         /* 下拉選單 */
         .autocomplete-wrapper { position: relative; flex: 1; }
-        .autocomplete-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background-color: #0f172a; border: 1px solid var(--primary); max-height: 200px; overflow-y: auto; z-index: 100; border-radius: 8px; display: none; box-shadow: 0 8px 16px rgba(0,0,0,0.5); }
-        .autocomplete-item { padding: 10px 12px; cursor: pointer; color: white; border-bottom: 1px solid var(--border); font-size: 13px; }
+        .autocomplete-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background-color: var(--input-bg); border: 1px solid var(--primary); max-height: 200px; overflow-y: auto; z-index: 100; border-radius: 8px; display: none; box-shadow: 0 8px 16px rgba(0,0,0,0.2); }
+        .autocomplete-item { padding: 10px 12px; cursor: pointer; color: var(--text-main); border-bottom: 1px solid var(--border); font-size: 13px; }
         .autocomplete-item:last-child { border-bottom: none; }
-        .autocomplete-item:hover { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; }
+        .autocomplete-item:hover { background: rgba(139, 92, 246, 0.1); color: var(--primary); }
 
         /* 統計面板 */
         .section-header { font-size: 16px; border-bottom: 2px solid var(--border); padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; margin-top: 25px; }
         .overall-luck-board { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .luck-card { background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid var(--border); text-align: center; display: flex; flex-direction: column; align-items: center;}
+        .luck-card { background: var(--input-bg); padding: 12px; border-radius: 8px; border: 1px solid var(--border); text-align: center; display: flex; flex-direction: column; align-items: center;}
         
         /* 動態下拉選單樣式 */
         .luck-select { background: transparent; border: 1px solid var(--border); color: var(--text-sub); border-radius: 4px; padding: 2px 4px; font-size: 12px; font-weight: bold; outline: none; cursor: pointer; text-align: center; margin-bottom: 8px; width: 100%;}
-        .luck-select option { background: var(--card-bg); color: white; }
+        .luck-select option { background: var(--card-bg); color: var(--text-main); }
 
         /* 巔峰榜 */
-        .peak-board { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 12px; border-radius: 8px; border: 1px solid #4ade8055; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px;}
+        .peak-board { background: linear-gradient(135deg, var(--card-bg) 0%, var(--input-bg) 100%); padding: 12px; border-radius: 8px; border: 1px solid #4ade8055; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px;}
         .peak-item { display: flex; justify-content: space-between; font-size: 13px; font-weight: bold;}
         .peak-label-best { color: #4ade80; } .peak-label-spook { color: #ef4444; }
 
         /* 橫向長條圖 */
         .h-record-card { 
             position: relative; 
-            background: #1e293b; 
+            background: var(--card-bg); 
             border: 1px solid var(--border); 
             border-radius: 8px; 
             margin-bottom: 8px; 
@@ -112,7 +141,7 @@
         }
         .h-date { 
             font-size: 12px; 
-            color: white;
+            color: var(--text-main);
             font-family: monospace;
         }
 
@@ -130,7 +159,7 @@
             justify-content: center;
             border-radius: 4px; 
             font-size: 11px; 
-            color: white; 
+            color: white; /* 標籤底色深，維持白字 */
             font-weight: bold;
             box-sizing: border-box;
             white-space: nowrap;
@@ -146,7 +175,7 @@
         
         .h-pulls { 
             font-size: 12px; 
-            color: white; 
+            color: var(--text-main); 
             display: flex;
             align-items: baseline;
             justify-content: flex-end; 
@@ -160,7 +189,7 @@
         .h-luck {
             font-size: 12px;
             font-weight: normal; 
-            color: white;
+            color: var(--text-main);
             padding: 4px 0;
             border-radius: 6px;
             width: 85px; 
@@ -184,7 +213,10 @@
 <body>
 
 <div class="container">
-    <h1>✨ 抽卡紀錄分析器</h1>
+    <div class="title-row">
+        <h1>✨ 抽卡紀錄分析器</h1>
+        <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">☀️</button>
+    </div>
     <p class="subtitle">支援主推防歪與體質鑑定</p>
 
     <div class="oshi-box">
@@ -206,8 +238,8 @@
         <div class="pending-item pending-re" onclick="editPending('re')">復刻池必出UP ✏️<span id="pRe">140</span></div>
     </div>
 
-    <div class="form-group" style="background: rgba(139, 92, 246, 0.1); padding: 12px; border-radius: 8px; border: 1px dashed var(--primary); margin-bottom: 20px;">
-        <label class="group-label" style="color: #c4b5fd;">📸 自動輔助：上傳抽卡紀錄截圖</label>
+    <div class="form-group" style="background: rgba(139, 92, 246, 0.05); padding: 12px; border-radius: 8px; border: 1px dashed var(--primary); margin-bottom: 20px;">
+        <label class="group-label" style="color: var(--primary);">📸 自動輔助：上傳抽卡紀錄截圖</label>
         <input type="file" id="ocrInput" accept="image/*" multiple onchange="handleOCR(event)" style="padding: 5px 0; font-size: 13px; border: none; background: transparent; color: var(--text-sub);">
         <div id="ocrStatus" style="font-size: 12px; margin-top: 6px; font-weight: bold; color: var(--text-sub);">請上傳抽卡紀錄</div>
     </div>
@@ -262,7 +294,7 @@
 
     <div class="form-group">
         <label class="group-label">4. 花費抽數 (1~70)</label>
-        <input type="number" id="pulls" placeholder="距離上次出金花費抽數 (按 Enter 即可新增)" style="width: 100%;" min="1" max="70" onkeydown="if(event.key === 'Enter') addRecord()">
+        <input type="number" id="pulls" placeholder="距離上次出金花費抽數" style="width: 100%;" min="1" max="70" onkeydown="if(event.key === 'Enter') addRecord()">
     </div>
 
     <button class="main-btn" onclick="addRecord()">新增紀錄 📝</button>
@@ -300,6 +332,24 @@
 <script src="ocr_parser.js"></script>
 
 <script>
+    // ── 深淺色主題 (支援手動與系統預設) ──
+    function initTheme() {
+        let saved = localStorage.getItem('theme');
+        if (!saved) {
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            saved = prefersDark ? 'dark' : 'light';
+        }
+        document.documentElement.dataset.theme = saved;
+        document.getElementById('themeBtn').textContent = saved === 'dark' ? '☀️' : '🌙';
+    }
+
+    function toggleTheme() {
+        const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        localStorage.setItem('theme', next);
+        document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+    }
+
     const getDB = () => JSON.parse(localStorage.getItem('db_v4')) || [];
     const setDB = (db) => localStorage.setItem('db_v4', JSON.stringify(db));
 
@@ -691,16 +741,16 @@
                 const waiLeadStr = maxLeads.map(l => `${leadIcons[l]||''}${l}`).join('、');
                 peakHTML += `<div class="peak-item" style="margin-top:4px;"><span class="peak-label-spook">💔 歪卡常客:</span> <span>${waiLeadStr} (${maxCount}次)</span></div>`;
             }
-            document.getElementById('peakBoard').innerHTML = peakHTML || '<div style="text-align:center;font-size:12px;color:#94a3b8">尚無目標數據</div>';
+            document.getElementById('peakBoard').innerHTML = peakHTML || '<div style="text-align:center;font-size:12px;color:var(--text-sub)">尚無目標數據</div>';
         } else {
-            document.getElementById('peakBoard').innerHTML = `<div style="text-align:center;font-size:12px;color:#94a3b8">尚無資料</div>`;
+            document.getElementById('peakBoard').innerHTML = `<div style="text-align:center;font-size:12px;color:var(--text-sub)">尚無資料</div>`;
         }
 
         document.getElementById('recordList').innerHTML = db.map(r => {
             let cardTypeStr = '';
             let statusColor = '#94a3b8';
 
-            // 💡 渲染標籤邏輯更新：統一顯示「🎯 限定」
+            // 💡 渲染標籤邏輯更新
             if (r.res === 'target') {
                 cardTypeStr = '🎯 限定';
                 statusColor = 'var(--primary)';
@@ -729,7 +779,7 @@
             const dateStr = r._sortTime !== r.id ? `[${d.getFullYear().toString().slice(2)}/${(d.getMonth()+1).toString().padStart(2,'0')}]` : '[未知]';
             const barWidth = Math.min((r.pulls / 70) * 100, 100);
 
-            let luckBgStyle = 'rgba(0,0,0,0.3)';
+            let luckBgStyle = 'rgba(128,128,128,0.2)'; /* 變更為適應深淺色的半透明底 */
             if (r.pulls <= 55) {
                 luckBgStyle = r.luck.c + 'BF'; 
             }
@@ -747,8 +797,8 @@
                         </div>
                         
                         <span class="h-title">
-                            <span style="font-size: 15px; font-weight: bold; color: white;">${r.card || '未知'}</span>
-                            <span style="font-size: 12px; color: white; font-weight: normal;"> | ${r.banner}</span>
+                            <span style="font-size: 15px; font-weight: bold; color: var(--text-main);">${r.card || '未知'}</span>
+                            <span style="font-size: 12px; color: var(--text-main); font-weight: normal;"> | ${r.banner}</span>
                             <span class="h-date" style="font-size: 12px;">${dateStr}</span>
                         </span>
                     </div>
@@ -773,6 +823,7 @@
         } 
     }
     
+    initTheme();
     loadOshis();
     initEventData();
     renderUI();
