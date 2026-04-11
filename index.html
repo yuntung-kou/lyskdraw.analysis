@@ -174,8 +174,14 @@
     </div>
 
     <div class="pending-board">
-        <div class="pending-item pending-lim" onclick="editPending('lim')">限定池已墊 ✏️<span id="pLim">0</span></div>
-        <div class="pending-item pending-re" onclick="editPending('re')">復刻池已墊 ✏️<span id="pRe">0</span></div>
+        <div class="pending-item pending-lim" onclick="editPending('lim')">限定池必出UP ✏️<span id="pLim">140</span></div>
+        <div class="pending-item pending-re" onclick="editPending('re')">復刻池必出UP ✏️<span id="pRe">140</span></div>
+    </div>
+
+    <div class="form-group" style="background: rgba(139, 92, 246, 0.1); padding: 12px; border-radius: 8px; border: 1px dashed var(--primary); margin-bottom: 20px;">
+        <label class="group-label" style="color: #c4b5fd;">📸 自動輔助：上傳抽卡紀錄截圖</label>
+        <input type="file" id="ocrInput" accept="image/*" multiple onchange="handleOCR(event)" style="padding: 5px 0; font-size: 13px; border: none; background: transparent; color: var(--text-sub);">
+        <div id="ocrStatus" style="font-size: 12px; margin-top: 6px; font-weight: bold; color: var(--text-sub);">請上傳抽卡紀錄</div>
     </div>
 
     <div class="form-group">
@@ -228,13 +234,7 @@
 
     <div class="form-group">
         <label class="group-label">4. 花費抽數 (1~70)</label>
-        <input type="number" id="pulls" placeholder="距離上次出金花費抽數" style="width: 100%;" min="1" max="70">
-    </div>
-
-    <div class="form-group" style="background: rgba(139, 92, 246, 0.1); padding: 12px; border-radius: 8px; border: 1px dashed var(--primary); margin-bottom: 20px;">
-        <label class="group-label" style="color: #c4b5fd;">📸 自動輔助：上傳抽卡紀錄截圖</label>
-        <input type="file" id="ocrInput" accept="image/*" multiple onchange="handleOCR(event)" style="padding: 5px 0; font-size: 13px; border: none; background: transparent; color: var(--text-sub);">
-        <div id="ocrStatus" style="font-size: 12px; margin-top: 6px; font-weight: bold; color: var(--text-sub);">請上傳抽卡紀錄</div>
+        <input type="number" id="pulls" placeholder="距離上次出金花費抽數 (按 Enter 即可新增)" style="width: 100%;" min="1" max="70" onkeydown="if(event.key === 'Enter') addRecord()">
     </div>
 
     <button class="main-btn" onclick="addRecord()">新增紀錄 📝</button>
@@ -511,7 +511,8 @@
     const setP = (type, v) => { localStorage.setItem('p_' + type, v); renderUI(); };
 
     function editPending(type) {
-        const v = prompt("手動修改墊池進度：", getP(type));
+        // 修改提示文字，確保使用者輸入的是「已經墊了的抽數」
+        const v = prompt("手動修改『已墊抽數』\n(請輸入您目前已經墊了幾抽，0~139)：", getP(type));
         if (v !== null && !isNaN(parseInt(v))) setP(type, parseInt(v));
     }
 
@@ -575,8 +576,9 @@
     }
 
     function renderUI() {
-        document.getElementById('pLim').innerText = getP('lim');
-        document.getElementById('pRe').innerText = getP('re');
+        // 在 UI 顯示時，轉換為 140 - 已墊抽數
+        document.getElementById('pLim').innerText = 140 - getP('lim');
+        document.getElementById('pRe').innerText = 140 - getP('re');
         
         let db = getDB(); 
         const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
