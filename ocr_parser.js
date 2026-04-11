@@ -1,4 +1,4 @@
-// ocr_parser.js — 精準打擊版 v16
+// ocr_parser.js — v16
 
 async function handleOCR(event) {
   const files = event.target.files;
@@ -34,10 +34,7 @@ async function handleOCR(event) {
 
     // 2. 排序並攤平紀錄
     pages.sort((pageA, pageB) => pageB[0].time - pageA[0].time);
-    let allRecords = [];
-    pages.forEach(page => {
-      allRecords = allRecords.concat(page);
-    });
+    const allRecords = pages.flat(); 
 
     const result = countPulls(allRecords);
 
@@ -183,15 +180,10 @@ function countPulls(records) {
     return { pullEvents: [], fiveStarCount: fiveStarPositions.length };
   }
 
-  let pullEvents = [];
-  
-  for (let i = 0; i < fiveStarPositions.length - 1; i++) {
-    const currentEvent = fiveStarPositions[i];       // 較新的五星
-    const previousEvent = fiveStarPositions[i + 1];  // 較舊的五星
-    
-    const pulls = previousEvent.pos - currentEvent.pos;
-    pullEvents.push({ name: currentEvent.name, pulls: pulls });
-  }
+  const pullEvents = fiveStarPositions.slice(0, -1).map((curr, i) => ({
+    name: curr.name,
+    pulls: fiveStarPositions[i + 1].pos - curr.pos
+  }));
 
-  return { pullEvents: pullEvents, fiveStarCount: fiveStarPositions.length };
+  return { pullEvents, fiveStarCount: fiveStarPositions.length };
 }
