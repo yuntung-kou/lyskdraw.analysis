@@ -146,7 +146,7 @@ p.subtitle {
     padding: 12px;
     border-radius: 8px;
     border: 1px solid var(--border);
-    margin-bottom: 15px; /* 縮小一點以配合右欄的視覺密度 */
+    margin-bottom: 15px; 
     font-size: 12px;
     font-weight: bold;
 }
