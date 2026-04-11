@@ -45,8 +45,9 @@ body {
     transition: background-color 0.3s, color 0.3s;
 }
 
+/* 修改：為了容納雙欄，將 max-width 加寬至 1000px */
 .container {
-    max-width: 600px;
+    max-width: 1000px; 
     width: 100%;
     background-color: var(--card-bg);
     padding: 25px;
@@ -54,26 +55,26 @@ body {
     box-shadow: 0 10px 25px rgba(0,0,0,0.15);
     border: 1px solid var(--border);
     transition: background-color 0.3s;
+    box-sizing: border-box;
 }
 
 /* ════════════════════════════════════════════
    標題列
    ════════════════════════════════════════════ */
-.title-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 5px;
+.header-section {
+    position: relative;
+    text-align: center;
+    margin-bottom: 25px;
 }
 h1 {
-    text-align: center;
     color: var(--title-color);
     margin: 0;
     font-size: 24px;
-    flex-grow: 1;
-    margin-left: 20px;
 }
 .theme-btn {
+    position: absolute;
+    right: 0;
+    top: 0;
     background: none;
     border: none;
     font-size: 20px;
@@ -81,11 +82,36 @@ h1 {
     padding: 0;
 }
 p.subtitle {
-    text-align: center;
     color: var(--text-sub);
     font-size: 13px;
-    margin-bottom: 20px;
-    margin-top: 5px;
+    margin: 6px 0 0 0;
+}
+
+/* ════════════════════════════════════════════
+   主佈局與響應式雙欄 (Responsive Layout)
+   ════════════════════════════════════════════ */
+.main-layout {
+    display: flex;
+    flex-direction: column; /* 手機版預設：上下排列 */
+    gap: 25px;
+}
+
+/* 當螢幕寬度大於 850px (電腦或橫向平板) 時，切換為左右雙欄 */
+@media (min-width: 850px) {
+    .main-layout {
+        flex-direction: row;
+        align-items: flex-start;
+    }
+    .left-col {
+        flex: 0 0 380px; /* 左側表單固定寬度 */
+    }
+    .right-col {
+        flex: 1; /* 右側圖表佔據剩餘空間 */
+        min-width: 0; /* 防止超出邊界 */
+    }
+    .right-col .section-header:first-child {
+        margin-top: 0; /* 移除右欄第一個標題的上方間距，對齊左欄 */
+    }
 }
 
 /* ════════════════════════════════════════════
@@ -161,16 +187,10 @@ input[type="number"] {
     box-sizing: border-box;
     font-size: 14px;
 }
-/* 隱藏瀏覽器內建的數字輸入箭頭 */
 input::-webkit-calendar-picker-indicator { display: none !important; }
 
 /* radio / checkbox 群組 */
-.radio-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 4px;
-}
+.radio-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .radio-label {
     display: flex;
     align-items: center;
@@ -186,15 +206,9 @@ input::-webkit-calendar-picker-indicator { display: none !important; }
 .radio-label:hover { border-color: var(--primary); background: rgba(139, 92, 246, 0.1); }
 
 input[type="radio"],
-input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    margin: 0;
-    accent-color: var(--primary);
-    cursor: pointer;
-}
+input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var(--primary); cursor: pointer; }
 
-/* 主推 checkbox 專用樣式（顏色跟隨 --oshi-color） */
+/* 主推 checkbox 專用樣式 */
 .oshi-label input[type="checkbox"] { accent-color: var(--oshi-color); }
 .oshi-label:hover { border-color: var(--oshi-color); background: rgba(139, 92, 246, 0.05); }
 
@@ -266,12 +280,7 @@ input[type="checkbox"] {
     align-items: center;
     margin-top: 25px;
 }
-.overall-luck-board {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 15px;
-}
+.overall-luck-board { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
 .luck-card {
     background: var(--input-bg);
     padding: 12px;
@@ -283,7 +292,7 @@ input[type="checkbox"] {
     align-items: center;
 }
 
-/* 體質選擇下拉（自訂外觀，移除瀏覽器預設箭頭） */
+/* 體質選擇下拉 */
 .luck-select {
     width: 100%;
     padding: 10px;
@@ -299,13 +308,11 @@ input[type="checkbox"] {
     margin-bottom: 12px;
     appearance: none;
     -webkit-appearance: none;
-    /* 自訂下拉箭頭（深色模式用紫色 SVG） */
     background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%238b5cf6%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
     background-repeat: no-repeat;
     background-position: right 10px center;
     background-size: 16px;
 }
-/* 淺色模式箭頭改為深粉色 */
 [data-theme="light"] .luck-select {
     background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23db2777%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
 }
@@ -341,109 +348,29 @@ input[type="checkbox"] {
     display: flex;
     height: 48px;
 }
-
-/* 底層彩色長條（寬度由 JS 依抽數計算後注入 style） */
 .h-bar-bg {
-    position: absolute;
-    left: 0; top: 0; bottom: 0;
-    opacity: 1;
-    z-index: 1;
-    transition: width 0.5s ease-out;
+    position: absolute; left: 0; top: 0; bottom: 0; opacity: 1; z-index: 1; transition: width 0.5s ease-out;
 }
-
-/* 長條上方的文字層 */
 .h-content {
-    position: relative;
-    z-index: 2;
-    padding: 0 12px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    box-sizing: border-box;
+    position: relative; z-index: 2; padding: 0 12px; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box;
 }
-.h-left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: 1;
-    overflow: hidden;
-    white-space: nowrap;
-}
-.h-right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-}
-.h-date {
-    font-size: 12px;
-    color: var(--text-main);
-    font-family: monospace;
-}
-
-/* 標籤群組 */
+.h-left { display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden; white-space: nowrap; }
+.h-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.h-date { font-size: 12px; color: var(--text-main); font-family: monospace; }
 .h-tags { display: flex; gap: 4px; align-items: center; }
 .tag {
-    padding: 0 6px;
-    height: 20px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    font-size: 11px;
-    color: white;
-    font-weight: bold;
-    box-sizing: border-box;
-    white-space: nowrap;
+    padding: 0 6px; height: 20px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 11px; color: white; font-weight: bold; box-sizing: border-box; white-space: nowrap;
 }
 .tag-lim { background: var(--limited-color); }
 .tag-re  { background: var(--rerun-color); }
-
-/* 卡片標題列 */
 .h-title { display: flex; align-items: baseline; gap: 6px; }
-
-/* 抽數顯示 */
-.h-pulls {
-    font-size: 12px;
-    color: var(--text-main);
-    display: flex;
-    align-items: baseline;
-    justify-content: flex-end;
-    width: 45px;
-    gap: 3px;
-}
+.h-pulls { font-size: 12px; color: var(--text-main); display: flex; align-items: baseline; justify-content: flex-end; width: 45px; gap: 3px; }
 .pull-num { font-size: 18px; font-weight: bold; }
-
-/* 體質標籤（彩色底） */
-.h-luck {
-    font-size: 12px;
-    font-weight: normal;
-    color: var(--text-main);
-    padding: 4px 0;
-    border-radius: 6px;
-    width: 85px;
-    text-align: center;
-    box-sizing: border-box;
-}
-
-/* 刪除按鈕 */
-.del-btn-icon {
-    background: transparent;
-    border: none;
-    font-size: 14px;
-    cursor: pointer;
-    padding: 4px;
-    opacity: 0.5;
-    transition: 0.2s;
-    width: 28px;
-    text-align: center;
-}
+.h-luck { font-size: 12px; font-weight: normal; color: var(--text-main); padding: 4px 0; border-radius: 6px; width: 85px; text-align: center; box-sizing: border-box; }
+.del-btn-icon { background: transparent; border: none; font-size: 14px; cursor: pointer; padding: 4px; opacity: 0.5; transition: 0.2s; width: 28px; text-align: center; }
 .del-btn-icon:hover { opacity: 1; color: #ef4444; }
 
-/* ════════════════════════════════════════════
-   體質稱號文字顏色（用在 innerHTML 插入的 <span>）
-   ════════════════════════════════════════════ */
+/* 體質稱號文字顏色 */
 .title-god     { color: #16a34a; font-weight: bold; }
 .title-lucky   { color: #4ade80; font-weight: bold; }
 .title-plain   { color: #facc15; font-weight: bold; }
