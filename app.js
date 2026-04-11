@@ -8,9 +8,16 @@ const setDB = db => localStorage.setItem('db_v4', JSON.stringify(db));
 const getP  = type => parseInt(localStorage.getItem('p_' + type)) || 0;
 const setP  = (type, v) => { localStorage.setItem('p_' + type, v); renderUI(); };
 
-// ── 深淺色主題 ────────────────────────────────────────────────
+// ── 深淺色主題 (支援跟隨系統預設) ──────────────────────────────
 function initTheme() {
-    const saved = localStorage.getItem('theme') || 'dark';
+    let saved = localStorage.getItem('theme');
+    
+    // 如果沒有手動設定過，則讀取系統預設設定
+    if (!saved) {
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        saved = prefersDark ? 'dark' : 'light';
+    }
+    
     document.documentElement.dataset.theme = saved;
     document.getElementById('themeBtn').textContent = saved === 'dark' ? '☀️' : '🌙';
 }
@@ -341,6 +348,7 @@ function renderUI() {
             : '[未知]';
         const barWidth = Math.min((r.pulls / 70) * 100, 100);
 
+        // 修改：使用 CSS 變數 var(--text-main) 取代寫死的 color:white;
         return `
         <div class="h-record-card">
             <div class="h-bar-bg" style="width:${barWidth}%; background-color:${r.luck.c};"></div>
@@ -352,8 +360,8 @@ function renderUI() {
                         <span class="tag" style="background-color:${statusColor};">${cardTypeStr}</span>
                     </div>
                     <span class="h-title">
-                        <span style="font-size:15px; font-weight:bold; color:white;">${r.card || '未知'}</span>
-                        <span style="font-size:12px; color:white; font-weight:normal;"> | ${r.banner}</span>
+                        <span style="font-size:15px; font-weight:bold; color:var(--text-main);">${r.card || '未知'}</span>
+                        <span style="font-size:12px; color:var(--text-main); font-weight:normal;"> | ${r.banner}</span>
                         <span class="h-date">${dateStr}</span>
                     </span>
                 </div>
