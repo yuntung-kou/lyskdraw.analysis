@@ -258,6 +258,10 @@
 <script src="ocr_parser.js"></script>
 
 <script>
+    // 💡 採用精簡建議 7：抽取 LocalStorage 幫手函式
+    const getDB = () => JSON.parse(localStorage.getItem('db_v4')) || [];
+    const setDB = (db) => localStorage.setItem('db_v4', JSON.stringify(db));
+
     const leadIcons = {'祁煜':'🐟', '沈星回':'🌟', '黎深':'🍐', '秦徹':'🚘', '夏以晝':'🍎'};
 
     let dropdownData = {
@@ -294,8 +298,10 @@
         wrapper.style.display = count > 0 ? 'block' : 'none';
     }
 
+    // 💡 採用精簡建議 3
     function filterDropdown(inputId) { renderDropdown(inputId); }
-    function showDropdown(inputId) { renderDropdown(inputId); }
+    const showDropdown = filterDropdown;
+    
     function hideDropdownDelayed(inputId) {
         setTimeout(() => {
             const wrapper = document.getElementById(inputId + 'ListWrapper');
@@ -351,19 +357,15 @@
     function initEventData() {
         if (typeof eventCards === 'undefined') return;
         
-        let cardsWithTime = [];
-        eventCards.forEach(e => {
+        // 💡 採用精簡建議 4
+        const cardsWithTime = eventCards.flatMap(e => {
             const t = parseEventTime(e);
-            Object.values(e.cards).forEach(cards => {
-                cards.forEach(c => cardsWithTime.push({ name: c, time: t }));
-            });
+            return Object.values(e.cards).flat().map(c => ({ name: c, time: t }));
         });
         
         cardsWithTime.sort((a, b) => b.time - a.time);
         
-        let uniqueCards = new Set();
-        cardsWithTime.forEach(c => uniqueCards.add(c.name));
-        dropdownData.upCardName = Array.from(uniqueCards);
+        dropdownData.upCardName = [...new Set(cardsWithTime.map(c => c.name))];
 
         onPoolChange(); 
     }
@@ -394,9 +396,8 @@
         
         filtered.sort((a, b) => b.time - a.time);
         
-        let uniqueBanners = new Set();
-        filtered.forEach(f => uniqueBanners.add(f.name));
-        dropdownData.bannerName = Array.from(uniqueBanners);
+        // 💡 採用精簡建議 5
+        dropdownData.bannerName = [...new Set(filtered.map(f => f.name))];
     }
 
     function onPoolChange() {
@@ -554,9 +555,9 @@
             setP(poolKey, currentP + pulls); 
         }
 
-        let db = JSON.parse(localStorage.getItem('db_v4')) || [];
+        let db = getDB(); // 💡 採用精簡建議 7
         db.push(rec);
-        localStorage.setItem('db_v4', JSON.stringify(db));
+        setDB(db);
         
         document.getElementById('cardName').value = '';
         document.getElementById('pulls').value = '';
@@ -570,9 +571,9 @@
 
     function deleteRec(id) {
         if (confirm("確定刪除此筆紀錄？")) {
-            let db = JSON.parse(localStorage.getItem('db_v4')) || [];
+            let db = getDB(); // 💡 採用精簡建議 7
             db = db.filter(r => r.id !== id);
-            localStorage.setItem('db_v4', JSON.stringify(db));
+            setDB(db);
             renderUI();
         }
     }
@@ -581,7 +582,7 @@
         document.getElementById('pLim').innerText = getP('lim');
         document.getElementById('pRe').innerText = getP('re');
         
-        let db = JSON.parse(localStorage.getItem('db_v4')) || [];
+        let db = getDB(); // 💡 採用精簡建議 7
         const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
 
         db.forEach(r => {
@@ -660,7 +661,9 @@
                 }
             }
 
-            const dateStr = r._sortTime !== r.id ? `[${new Date(r._sortTime).getFullYear().toString().slice(2)}/${(new Date(r._sortTime).getMonth()+1).toString().padStart(2,'0')}]` : '[未知]';
+            // 💡 採用精簡建議 6：抽取 new Date
+            const d = new Date(r._sortTime);
+            const dateStr = r._sortTime !== r.id ? `[${d.getFullYear().toString().slice(2)}/${(d.getMonth()+1).toString().padStart(2,'0')}]` : '[未知]';
             const barWidth = Math.min((r.pulls / 70) * 100, 100);
 
             return `
