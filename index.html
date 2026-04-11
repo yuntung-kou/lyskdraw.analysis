@@ -258,7 +258,6 @@
 <script src="ocr_parser.js"></script>
 
 <script>
-    // 💡 採用精簡建議 7：抽取 LocalStorage 幫手函式
     const getDB = () => JSON.parse(localStorage.getItem('db_v4')) || [];
     const setDB = (db) => localStorage.setItem('db_v4', JSON.stringify(db));
 
@@ -298,7 +297,6 @@
         wrapper.style.display = count > 0 ? 'block' : 'none';
     }
 
-    // 💡 採用精簡建議 3
     function filterDropdown(inputId) { renderDropdown(inputId); }
     const showDropdown = filterDropdown;
     
@@ -357,7 +355,6 @@
     function initEventData() {
         if (typeof eventCards === 'undefined') return;
         
-        // 💡 採用精簡建議 4
         const cardsWithTime = eventCards.flatMap(e => {
             const t = parseEventTime(e);
             return Object.values(e.cards).flat().map(c => ({ name: c, time: t }));
@@ -396,7 +393,6 @@
         
         filtered.sort((a, b) => b.time - a.time);
         
-        // 💡 採用精簡建議 5
         dropdownData.bannerName = [...new Set(filtered.map(f => f.name))];
     }
 
@@ -555,7 +551,7 @@
             setP(poolKey, currentP + pulls); 
         }
 
-        let db = getDB(); // 💡 採用精簡建議 7
+        let db = getDB(); 
         db.push(rec);
         setDB(db);
         
@@ -571,7 +567,7 @@
 
     function deleteRec(id) {
         if (confirm("確定刪除此筆紀錄？")) {
-            let db = getDB(); // 💡 採用精簡建議 7
+            let db = getDB(); 
             db = db.filter(r => r.id !== id);
             setDB(db);
             renderUI();
@@ -582,7 +578,7 @@
         document.getElementById('pLim').innerText = getP('lim');
         document.getElementById('pRe').innerText = getP('re');
         
-        let db = getDB(); // 💡 採用精簡建議 7
+        let db = getDB(); 
         const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
 
         db.forEach(r => {
@@ -661,7 +657,6 @@
                 }
             }
 
-            // 💡 採用精簡建議 6：抽取 new Date
             const d = new Date(r._sortTime);
             const dateStr = r._sortTime !== r.id ? `[${d.getFullYear().toString().slice(2)}/${(d.getMonth()+1).toString().padStart(2,'0')}]` : '[未知]';
             const barWidth = Math.min((r.pulls / 70) * 100, 100);
