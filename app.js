@@ -13,7 +13,10 @@ const leadIcons = {
 const getDB  = () => JSON.parse(localStorage.getItem('db_v4')) || [];
 const setDB  = (db) => localStorage.setItem('db_v4', JSON.stringify(db));
 const getP   = (type) => parseInt(localStorage.getItem('p_' + type)) || 0;
-const setP   = (type, v) => { localStorage.setItem('p_' + type, v); renderUI(); };
+
+// 🔧 修正1：拆出不含 renderUI 的內部版本，避免 addRecord 觸發雙重渲染
+const _setP  = (type, v) => localStorage.setItem('p_' + type, v);
+const setP   = (type, v) => { _setP(type, v); renderUI(); };   // 僅供 editPending 等頂層呼叫
 
 function initTheme() {
     let saved = localStorage.getItem('theme');
@@ -77,13 +80,11 @@ function parseEventTime(e) {
     }
 }
 
-// 💡 修正：初始化時統一交給 onPoolChange 處理下拉選單資料
 function initEventData() {
     if (typeof eventCards === 'undefined') return;
     onPoolChange();
 }
 
-// 💡 修正：依目前選擇的「主池類型」與「子池類型」過濾可選的卡池名稱與反查卡名
 function updateBannerRecommendations() {
     if (typeof eventCards === 'undefined') return;
 
@@ -111,9 +112,8 @@ function updateBannerRecommendations() {
     });
 
     filteredEvents.sort((a, b) => b.time - a.time);
-    
+
     dropdownData.bannerName = [...new Set(filteredEvents.map(f => f.event.eventName))];
-    // 💡 同步更新反查卡名清單，確保不出現被過濾掉的卡名
     dropdownData.upCardName = [...new Set(filteredEvents.flatMap(f => Object.values(f.event.cards).flat()))];
 }
 
@@ -156,6 +156,7 @@ function renderDropdown(inputId) {
     wrapper.style.display = count > 0 ? 'block' : 'none';
 }
 
+// HTML 中 oninput / onfocus 分別呼叫這兩個名稱，保留以維持相容性
 function filterDropdown(inputId) { renderDropdown(inputId); }
 const showDropdown = filterDropdown;
 
@@ -164,6 +165,16 @@ function hideDropdownDelayed(inputId) {
         const wrapper = document.getElementById(inputId + 'ListWrapper');
         if (wrapper) wrapper.style.display = 'none';
     }, 150);
+}
+
+// 🔧 修正3：加入 mainPool 過濾，避免同名活動取到錯誤池版本
+function findEvent(eventName, mainPool) {
+    if (typeof eventCards === 'undefined') return null;
+    const matches = eventCards.filter(e => e.eventName === eventName);
+    if (!matches.length) return null;
+    return matches.find(e =>
+        mainPool === '復刻' ? e.poolType.includes('復刻') : !e.poolType.includes('復刻')
+    ) || matches[0];
 }
 
 window.autoFillFromUpCard = function() {
@@ -195,12 +206,7 @@ window.autoFillBannerInfo = function(forcedEvent = null) {
     let event = forcedEvent;
     if (!event) {
         const currentMainPool = document.querySelector('input[name="mainPool"]:checked').value;
-        const matches = eventCards.filter(e => e.eventName === bannerName);
-        event = matches.find(e =>
-            (currentMainPool === '復刻' && e.poolType.includes('復刻')) ||
-            (currentMainPool === '限定' && !e.poolType.includes('復刻'))
-        );
-        if (!event) event = matches[0];
+        event = findEvent(bannerName, currentMainPool);
     }
 
     if (event) {
@@ -269,13 +275,13 @@ function addRecord() {
     const card       = document.getElementById('cardName').value.trim();
     const pulls      = parseInt(document.getElementById('pulls').value);
 
-    if (!banner)                            return alert('請輸入卡池名稱！');
+    if (!banner)                                 return alert('請輸入卡池名稱！');
     if (isNaN(pulls) || pulls < 1 || pulls > 70) return alert('請輸入 1-70 抽！');
 
     const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
-    const event = typeof eventCards !== 'undefined'
-        ? eventCards.find(e => e.eventName === banner)
-        : null;
+
+    // 🔧 修正3：使用 findEvent 確保取到正確主池版本
+    const event = findEvent(banner, main);
 
     const isUpCard = event && event.cards[pulledLead] &&
                      (!card || event.cards[pulledLead].includes(card));
@@ -300,11 +306,11 @@ function addRecord() {
     if (judgeResult === 'target') {
         rec.total = currentP + pulls;
         rec.luck  = judgeT(rec.total);
-        setP(poolKey, 0);
+        _setP(poolKey, 0);                  // 🔧 修正1：用 _setP 避免提前觸發 renderUI
     } else {
         rec.total = pulls;
         rec.luck  = judgeS(pulls);
-        setP(poolKey, currentP + pulls);
+        _setP(poolKey, currentP + pulls);   // 🔧 修正1：同上
     }
 
     let db = getDB();
@@ -317,7 +323,7 @@ function addRecord() {
     document.getElementById('ocrStatus').innerText = '請上傳抽卡紀錄';
     document.getElementById('ocrStatus').style.color = 'var(--text-sub)';
 
-    renderUI();
+    renderUI();   // 🔧 修正1：只在這裡觸發一次
 }
 
 function deleteRec(id) {
@@ -338,16 +344,8 @@ function clearAll() {
 
 function getEventDate(eventName, mainPool) {
     if (typeof eventCards === 'undefined') return 0;
-    const matches = eventCards.filter(e => e.eventName === eventName);
-    if (matches.length === 0) return 0;
-
-    let target = matches[0];
-    if (matches.length > 1) {
-        target = mainPool === '復刻'
-            ? matches.find(e => e.poolType.includes('復刻')) || matches[matches.length - 1]
-            : matches.find(e => !e.poolType.includes('復刻')) || matches[0];
-    }
-    return parseEventTime(target);
+    const target = findEvent(eventName, mainPool);
+    return target ? parseEventTime(target) : 0;
 }
 
 window.updateLuckStats = function() {
@@ -380,9 +378,11 @@ function renderUI() {
     let db     = getDB();
     const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
 
+    // 🔧 修正2：排序時一併快取 _evTime，避免渲染階段重複呼叫 getEventDate
     db.forEach(r => {
-        const evTime = getEventDate(r.banner, r.main);
-        r._sortTime   = evTime ? evTime : r.id;     
+        const evTime  = getEventDate(r.banner, r.main);
+        r._evTime     = evTime;
+        r._sortTime   = evTime || r.id;
         r._entryOrder = r.id;
     });
     db.sort((a, b) => b._sortTime - a._sortTime || b._entryOrder - a._entryOrder);
@@ -406,8 +406,8 @@ function renderUI() {
             waiRecords.forEach(r => counts[r.lead] = (counts[r.lead] || 0) + 1);
             let maxCount = 0; let maxLeads = [];
             for (const lead in counts) {
-                if (counts[lead] > maxCount)       { maxCount = counts[lead]; maxLeads = [lead]; }
-                else if (counts[lead] === maxCount) { maxLeads.push(lead); }
+                if (counts[lead] > maxCount)        { maxCount = counts[lead]; maxLeads = [lead]; }
+                else if (counts[lead] === maxCount)  { maxLeads.push(lead); }
             }
             const waiLeadStr = maxLeads.map(l => `${leadIcons[l] || ''}${l}`).join('、');
             peakHTML += `<div class="peak-item" style="margin-top:4px;"><span class="peak-label-spook">💔 歪卡常客:</span> <span>${waiLeadStr} (${maxCount}次)</span></div>`;
@@ -430,9 +430,10 @@ function renderUI() {
         } else if (r.res === 'oshi_spook') {
             cardTypeStr = '💖 防歪主推'; statusColor = 'var(--oshi-color)';
         } else {
+            // 🔧 修正3：使用 findEvent 確保取到正確主池版本
             let isUpCard = false;
             if (typeof eventCards !== 'undefined') {
-                const ev = eventCards.find(e => e.eventName === r.banner);
+                const ev = findEvent(r.banner, r.main);
                 if (ev && ev.cards[r.lead] && (!r.card || ev.cards[r.lead].includes(r.card))) {
                     isUpCard = true;
                 }
@@ -444,23 +445,22 @@ function renderUI() {
             }
         }
 
-        const evTime = getEventDate(r.banner, r.main);
-        const d = new Date(evTime || r.id);
-        const dateStr = evTime ? `[${d.getFullYear().toString().slice(2)}/${(d.getMonth()+1).toString().padStart(2,'0')}]` : '[未知]';
-        
+        // 🔧 修正2：直接使用已快取的 r._evTime，不再重複呼叫 getEventDate
+        const evTime  = r._evTime;
+        const d       = new Date(evTime || r.id);
+        const dateStr = evTime
+            ? `[${d.getFullYear().toString().slice(2)}/${(d.getMonth()+1).toString().padStart(2,'0')}]`
+            : '[未知]';
+
         const barWidth = Math.min((r.pulls / 70) * 100, 100);
 
         const luckClass = r.pulls > 55 ? 'luck-high' : 'luck-low';
-        
-        let isBlackText = false;
-        if (r.luck.s <= 0 && r.pulls < 62) {
-            isBlackText = true;
-        } 
-        else if (r.luck.s === 1 && r.pulls >= 55 && r.pulls <= 62) {
-            isBlackText = true;
-        }
-        
-        const fullLuckClass = `h-luck ${luckClass} ${isBlackText ? 'luck-black-light' : ''}`;
+
+        // 🔧 修正4：採用 Gemini 確認的正確合併寫法，完整保留原始判斷範圍
+        const isBlackText = (r.luck.s <= 0 && r.pulls < 62) ||
+                            (r.luck.s === 1 && r.pulls >= 55 && r.pulls <= 62);
+
+        const fullLuckClass  = `h-luck ${luckClass} ${isBlackText ? 'luck-black-light' : ''}`;
         const luckInlineStyle = r.pulls <= 55 ? `background-color: ${r.luck.c}BF; color: #ffffff;` : '';
 
         return `
