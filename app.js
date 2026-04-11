@@ -13,7 +13,6 @@
 // ────────────────────────────────────────────────────────────
 
 // 各攻略角色對應的 emoji 圖示
-// 若要新增角色，在這裡加一組 '角色名': 'emoji' 即可
 const leadIcons = {
     '祁煜': '🐟',
     '沈星回': '🌟',
@@ -22,8 +21,6 @@ const leadIcons = {
     '夏以晝': '🍎'
 };
 
-// localStorage 存取封裝
-// db_v4 存所有抽卡紀錄（陣列）；p_lim / p_re 存墊抽數
 const getDB  = () => JSON.parse(localStorage.getItem('db_v4')) || [];
 const setDB  = (db) => localStorage.setItem('db_v4', JSON.stringify(db));
 const getP   = (type) => parseInt(localStorage.getItem('p_' + type)) || 0;
@@ -35,7 +32,6 @@ const setP   = (type, v) => { localStorage.setItem('p_' + type, v); renderUI(); 
 // ────────────────────────────────────────────────────────────
 
 function initTheme() {
-    // 優先讀取上次手動選擇的主題；若無，跟隨系統設定
     let saved = localStorage.getItem('theme');
     if (!saved) {
         const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -77,7 +73,6 @@ function updateOshiSummary() {
 }
 
 function saveOshis() {
-    // 把所有打勾的 checkbox 值收集成陣列後存入 localStorage
     const oshis = Array.from(document.querySelectorAll('input[name="oshi"]:checked')).map(cb => cb.value);
     localStorage.setItem('oshis', JSON.stringify(oshis));
     updateOshiSummary();
@@ -86,7 +81,6 @@ function saveOshis() {
 
 function loadOshis() {
     const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
-    // 依據儲存的主推清單，恢復 checkbox 的打勾狀態
     document.querySelectorAll('input[name="oshi"]').forEach(cb => {
         cb.checked = oshis.includes(cb.value);
     });
@@ -98,8 +92,6 @@ function loadOshis() {
 //  § 卡池事件資料初始化
 // ────────────────────────────────────────────────────────────
 
-// 將 events 資料中的 "月.日" 格式（e.g. "3.15"）轉成 timestamp
-// 用來在紀錄列表中依活動時間排序
 function parseEventTime(e) {
     try {
         const startStr = e.duration.split('-')[0];
@@ -113,25 +105,30 @@ function parseEventTime(e) {
 
 function initEventData() {
     if (typeof eventCards === 'undefined') return;
-    onPoolChange();  // 初始化時統一交由 onPoolChange 來過濾所有選單
+
+    const cardsWithTime = eventCards.flatMap(e => {
+        const t = parseEventTime(e);
+        return Object.values(e.cards).flat().map(c => ({ name: c, time: t }));
+    });
+    cardsWithTime.sort((a, b) => b.time - a.time);
+    dropdownData.upCardName = [...new Set(cardsWithTime.map(c => c.name))];
+
+    onPoolChange();
 }
 
-// 依目前選擇的「主池類型」與「子池類型」過濾可選的卡池名稱與反查卡名
 function updateBannerRecommendations() {
     if (typeof eventCards === 'undefined') return;
 
     const mainPool = document.querySelector('input[name="mainPool"]:checked').value;
     const subPool  = document.querySelector('input[name="subPool"]:checked').value;
 
-    let filteredEvents = [];
+    let filtered = [];
     eventCards.forEach(e => {
         const isRerun = e.poolType.includes('復刻');
 
-        // 主池類型不符則跳過
         if (mainPool === '限定' && isRerun) return;
         if (mainPool === '復刻' && !isRerun) return;
 
-        // 子池類型比對
         let matchSub = false;
         if (subPool === '混池' && e.poolType.includes('混池')) matchSub = true;
         if (subPool === '日卡' && e.poolType.includes('日卡')) matchSub = true;
@@ -142,21 +139,13 @@ function updateBannerRecommendations() {
             e.poolType === '復刻'
         )) matchSub = true;
 
-        if (matchSub) {
-            filteredEvents.push({ event: e, time: parseEventTime(e) });
-        }
+        if (matchSub) filtered.push({ name: e.eventName, time: parseEventTime(e) });
     });
 
-    filteredEvents.sort((a, b) => b.time - a.time);
-    
-    // 1. 更新卡池名稱下拉清單
-    dropdownData.bannerName = [...new Set(filteredEvents.map(f => f.event.eventName))];
-    
-    // 2. 💡 修復 Bug：同步更新「以卡名反查卡池」的卡名清單，確保只出現符合當前勾選池類型（如單人池）的卡片
-    dropdownData.upCardName = [...new Set(filteredEvents.flatMap(f => Object.values(f.event.cards).flat()))];
+    filtered.sort((a, b) => b.time - a.time);
+    dropdownData.bannerName = [...new Set(filtered.map(f => f.name))];
 }
 
-// 卡池類型改變時，同步更新兩個下拉選單的資料來源
 function onPoolChange() {
     updateBannerRecommendations();
     updatePulledCardList();
@@ -167,8 +156,6 @@ function onPoolChange() {
 //  § 自動完成下拉選單
 // ────────────────────────────────────────────────────────────
 
-// 三個輸入欄位各自的下拉候選清單
-// 要新增其他下拉欄位時，在這裡加一個同名的 key
 let dropdownData = {
     bannerName: [],
     upCardName: [],
@@ -193,9 +180,7 @@ function renderDropdown(inputId) {
         div.onmousedown = function() {
             input.value = item;
             wrapper.style.display = 'none';
-            // 選擇卡池名稱後自動填入相關資訊
             if (inputId === 'bannerName') autoFillBannerInfo();
-            // 選擇卡名後反查對應卡池
             if (inputId === 'upCardName') autoFillFromUpCard();
         };
         wrapper.appendChild(div);
@@ -206,10 +191,9 @@ function renderDropdown(inputId) {
 }
 
 function filterDropdown(inputId) { renderDropdown(inputId); }
-const showDropdown = filterDropdown;  // onfocus 與 oninput 行為相同
+const showDropdown = filterDropdown;
 
 function hideDropdownDelayed(inputId) {
-    // 延遲隱藏，讓 onmousedown 有時間觸發後才收起
     setTimeout(() => {
         const wrapper = document.getElementById(inputId + 'ListWrapper');
         if (wrapper) wrapper.style.display = 'none';
@@ -221,7 +205,6 @@ function hideDropdownDelayed(inputId) {
 //  § 自動填入（卡池資訊互查）
 // ────────────────────────────────────────────────────────────
 
-// 以卡名反查卡池：輸入思念名稱後自動帶入對應活動
 window.autoFillFromUpCard = function() {
     const upCardName = document.getElementById('upCardName').value;
     if (!upCardName || typeof eventCards === 'undefined') return;
@@ -233,7 +216,6 @@ window.autoFillFromUpCard = function() {
     );
 
     if (matchingEvents.length > 0) {
-        // 優先選與目前主池類型相符的活動
         let bestEvent = matchingEvents.find(e =>
             (currentMainPool === '復刻' && e.poolType.includes('復刻')) ||
             (currentMainPool === '限定' && !e.poolType.includes('復刻'))
@@ -245,7 +227,6 @@ window.autoFillFromUpCard = function() {
     }
 };
 
-// 以卡池名稱填入池種類、子類型與 UP 卡名
 window.autoFillBannerInfo = function(forcedEvent = null) {
     const bannerName = document.getElementById('bannerName').value;
     if (typeof eventCards === 'undefined') return;
@@ -262,16 +243,13 @@ window.autoFillBannerInfo = function(forcedEvent = null) {
     }
 
     if (event) {
-        // 自動勾選主池類型
         const isRerun = event.poolType.includes('復刻');
         document.querySelector(`input[name="mainPool"][value="${isRerun ? '復刻' : '限定'}"]`).checked = true;
 
-        // 自動勾選子池類型
         if      (event.poolType.includes('混池')) document.querySelector('input[name="subPool"][value="混池"]').checked = true;
         else if (event.poolType.includes('日卡')) document.querySelector('input[name="subPool"][value="日卡"]').checked = true;
         else                                       document.querySelector('input[name="subPool"][value="單人"]').checked = true;
 
-        // 若目前 UP 卡名不在此活動的範圍內，自動帶入第一張 UP 卡
         const upInput  = document.getElementById('upCardName');
         const validCards = Object.values(event.cards).flat();
         if (!validCards.includes(upInput.value)) {
@@ -281,14 +259,12 @@ window.autoFillBannerInfo = function(forcedEvent = null) {
     onPoolChange();
 };
 
-// 依「獲得對象」與「卡池名稱」更新思念名稱下拉選單
 window.updatePulledCardList = function() {
     const bannerName = document.getElementById('bannerName').value;
     const pulledLead = document.querySelector('input[name="pulledLead"]:checked').value;
 
     let options = [];
 
-    // 先加入此活動該角色的限定 UP 卡
     if (bannerName && typeof eventCards !== 'undefined') {
         const event = eventCards.find(e => e.eventName === bannerName);
         if (event && event.cards && event.cards[pulledLead]) {
@@ -296,7 +272,6 @@ window.updatePulledCardList = function() {
         }
     }
 
-    // 再加入該角色的常駐卡（可能是「歪」的來源）
     if (typeof standardCards !== 'undefined' && standardCards[pulledLead]) {
         options.push(...standardCards[pulledLead]);
     }
@@ -307,9 +282,6 @@ window.updatePulledCardList = function() {
 
 // ────────────────────────────────────────────────────────────
 //  § 幸運判定
-//  judgeS：判定「單次抽數」（歪卡或沒中 UP 時用）
-//  judgeT：判定「累計總抽數」（中 UP 時用，計入墊抽）
-//  回傳 { t: 顯示文字, c: 顏色 hex, s: 分數（-2~2，用於統計體質） }
 // ────────────────────────────────────────────────────────────
 
 const judgeS = (p) => {
@@ -334,7 +306,6 @@ const judgeT = (p) => {
 // ────────────────────────────────────────────────────────────
 
 function editPending(type) {
-    // type: 'lim'（限定池）或 're'（復刻池）
     const v = prompt('手動修改『已墊抽數』\n(請輸入您目前已經墊了幾抽，0~139)：', getP(type));
     if (v !== null && !isNaN(parseInt(v))) setP(type, parseInt(v));
 }
@@ -345,7 +316,6 @@ function editPending(type) {
 // ────────────────────────────────────────────────────────────
 
 function addRecord() {
-    // 讀取表單欄位
     const banner     = document.getElementById('bannerName').value.trim();
     const main       = document.querySelector('input[name="mainPool"]:checked').value;
     const sub        = document.querySelector('input[name="subPool"]:checked').value;
@@ -361,14 +331,9 @@ function addRecord() {
         ? eventCards.find(e => e.eventName === banner)
         : null;
 
-    // 判斷是否為 UP 卡（卡名在此活動的 UP 清單內）
     const isUpCard = event && event.cards[pulledLead] &&
                      (!card || event.cards[pulledLead].includes(card));
 
-    // 判定結果：
-    //   target   → 抽中目標 UP
-    //   wai_lim  → 混池中抽中其他角色的 UP（主推以外）
-    //   wai_std  → 歪到常駐卡
     let judgeResult;
     if (isUpCard) {
         const isOtherOshiInMixed = sub === '混池' && oshis.length > 0 && !oshis.includes(pulledLead);
@@ -387,12 +352,10 @@ function addRecord() {
     let rec = { id: Date.now(), main, sub, lead: pulledLead, banner, card, pulls, res: judgeResult };
 
     if (judgeResult === 'target') {
-        // 中 UP：總抽數 = 本次墊抽 + 此次抽數，重置墊抽計數
         rec.total = currentP + pulls;
         rec.luck  = judgeT(rec.total);
         setP(poolKey, 0);
     } else {
-        // 歪卡：只記本次抽數，墊抽累加
         rec.total = pulls;
         rec.luck  = judgeS(pulls);
         setP(poolKey, currentP + pulls);
@@ -402,7 +365,6 @@ function addRecord() {
     db.push(rec);
     setDB(db);
 
-    // 清除輸入欄位與 OCR 狀態
     document.getElementById('cardName').value = '';
     document.getElementById('pulls').value = '';
     document.getElementById('ocrInput').value = '';
@@ -433,7 +395,6 @@ function clearAll() {
 //  § UI 渲染
 // ────────────────────────────────────────────────────────────
 
-// 查詢活動對應的時間戳（用來在紀錄列表中以活動時間排序）
 function getEventDate(eventName, mainPool) {
     if (typeof eventCards === 'undefined') return 0;
     const matches = eventCards.filter(e => e.eventName === eventName);
@@ -448,13 +409,11 @@ function getEventDate(eventName, mainPool) {
     return parseEventTime(target);
 }
 
-// 更新頁面上方的「體質鑑定」統計面板（依下拉選單篩選）
 window.updateLuckStats = function() {
     const db        = getDB();
     const mainFilter = document.getElementById('mainPoolLuckSelect').value;
     const subFilter  = document.getElementById('subPoolLuckSelect').value;
 
-    // 將平均 s 分數轉成稱號 HTML 字串
     const calcOverall = (items) => {
         if (!items.length) return '---';
         const avg = items.reduce((a, b) => a + b.luck.s, 0) / items.length;
@@ -465,36 +424,30 @@ window.updateLuckStats = function() {
         return               '<span class="title-bad">🌩️ 小倒霉鬼</span>';
     };
 
-    // 左欄：依主池類型篩選
     let mainItems = db.filter(r => r.res === 'target');
     if (mainFilter !== '綜合') mainItems = mainItems.filter(r => r.main === mainFilter);
     document.getElementById('luckMainVal').innerHTML = calcOverall(mainItems);
 
-    // 右欄：依子池類型篩選
     const subItems = db.filter(r => r.res === 'target' && r.sub === subFilter);
     document.getElementById('luckSubVal').innerHTML = calcOverall(subItems);
 };
 
-// 主渲染函式：更新墊抽顯示、巔峰榜、紀錄列表
 function renderUI() {
-    // 更新墊抽顯示（140 - 已墊 = 距保底剩餘）
     document.getElementById('pLim').innerText = 140 - getP('lim');
     document.getElementById('pRe').innerText  = 140 - getP('re');
 
     let db     = getDB();
     const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
 
-    // 為每筆紀錄計算排序用的時間戳
     db.forEach(r => {
         const evTime = getEventDate(r.banner, r.main);
-        r._sortTime   = evTime || r.id;     // 找不到活動時間則用新增時間
+        r._sortTime   = evTime ? evTime : r.id;     
         r._entryOrder = r.id;
     });
     db.sort((a, b) => b._sortTime - a._sortTime || b._entryOrder - a._entryOrder);
 
     updateLuckStats();
 
-    // ── 巔峰榜 ──
     let peakHTML = '';
     if (db.length > 0) {
         const targets = db.filter(r => r.res === 'target');
@@ -506,7 +459,6 @@ function renderUI() {
             peakHTML += `<div class="peak-item"><span class="peak-label-best">🏆 巔峰紀錄:</span> <span>${bestLeadStr} ${best.banner} (${best.total}抽)</span></div>`;
         }
 
-        // 統計歪卡最多的角色
         const waiRecords = db.filter(r => ['wai_std','wai_lim','wai','oshi_spook'].includes(r.res));
         if (waiRecords.length > 0) {
             const counts = {};
@@ -527,17 +479,16 @@ function renderUI() {
             `<div style="text-align:center;font-size:12px;color:var(--text-sub)">尚無資料</div>`;
     }
 
-    // ── 紀錄列表（橫向長條圖） ──
     document.getElementById('recordList').innerHTML = db.map(r => {
 
-        // 判斷顯示標籤文字與顏色
         let cardTypeStr, statusColor;
         if (r.res === 'target') {
             cardTypeStr = '🎯 限定'; statusColor = 'var(--primary)';
         } else if (r.res === 'wai_lim') {
             cardTypeStr = '💔 限定'; statusColor = '#ef4444';
+        } else if (r.res === 'oshi_spook') {
+            cardTypeStr = '💖 防歪主推'; statusColor = 'var(--oshi-color)';
         } else {
-            // 進一步判斷是否為 UP 卡（常駐池的 UP 範圍內）
             let isUpCard = false;
             if (typeof eventCards !== 'undefined') {
                 const ev = eventCards.find(e => e.eventName === r.banner);
@@ -545,25 +496,37 @@ function renderUI() {
                     isUpCard = true;
                 }
             }
-            if ((r.res === 'wai' || r.res === 'oshi_spook') && isUpCard) {
+            if (isUpCard) {
                 cardTypeStr = '💔 限定'; statusColor = '#ef4444';
             } else {
                 cardTypeStr = '☠️ 常駐'; statusColor = '#475569';
             }
         }
 
-        // 顯示用的年月字串（取活動時間；若無則顯示「未知」）
-        const d       = new Date(r._sortTime);
-        const dateStr = r._sortTime !== r.id
-            ? `[${d.getFullYear().toString().slice(2)}/${(d.getMonth()+1).toString().padStart(2,'0')}]`
-            : '[未知]';
-
-        // 長條寬度：以 70 抽為滿格（超過也只顯示滿格）
+        const evTime = getEventDate(r.banner, r.main);
+        const d = new Date(evTime || r.id);
+        const dateStr = evTime ? `[${d.getFullYear().toString().slice(2)}/${(d.getMonth()+1).toString().padStart(2,'0')}]` : '[未知]';
+        
         const barWidth = Math.min((r.pulls / 70) * 100, 100);
 
-        // 💡 針對大於 55 抽的項目，給予 luck-high class 交由 CSS 處理深淺色
+        // 💡 針對大於 55 抽的項目，給予 luck-high class
         const luckClass = r.pulls > 55 ? 'luck-high' : 'luck-low';
-        const luckInlineStyle = r.pulls <= 55 ? `background-color: ${r.luck.c}BF; color: white;` : '';
+        
+        // 💡 新增：判斷淺色模式下是否需要改為黑字
+        let isBlackText = false;
+        // 條件一：平凡人、小不幸運、小倒霉鬼 (s <= 0) 且 未達62抽 (< 62)
+        if (r.luck.s <= 0 && r.pulls < 62) {
+            isBlackText = true;
+        } 
+        // 條件二：幸運兒 (s === 1) 且 55~62抽 (>= 55 且 <= 62)
+        else if (r.luck.s === 1 && r.pulls >= 55 && r.pulls <= 62) {
+            isBlackText = true;
+        }
+        
+        const fullLuckClass = `h-luck ${luckClass} ${isBlackText ? 'luck-black-light' : ''}`;
+        
+        // 確保給予行內白字樣式，若需黑字則透過 CSS 的 !important 覆蓋
+        const luckInlineStyle = r.pulls <= 55 ? `background-color: ${r.luck.c}BF; color: #ffffff;` : '';
 
         return `
         <div class="h-record-card">
@@ -583,7 +546,7 @@ function renderUI() {
                 </div>
                 <div class="h-right">
                     <div class="h-pulls"><span class="pull-num">${r.pulls}</span> 抽</div>
-                    <div class="h-luck ${luckClass}" style="${luckInlineStyle}">${r.luck.t}</div>
+                    <div class="${fullLuckClass}" style="${luckInlineStyle}">${r.luck.t}</div>
                     <button class="del-btn-icon" onclick="deleteRec(${r.id})" title="刪除紀錄">🗑️</button>
                 </div>
             </div>
@@ -595,7 +558,6 @@ function renderUI() {
 
 // ────────────────────────────────────────────────────────────
 //  § 頁面啟動入口
-//  所有需要在載入時執行一次的初始化呼叫集中在這裡
 // ────────────────────────────────────────────────────────────
 initTheme();
 loadOshis();
