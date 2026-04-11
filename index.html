@@ -47,6 +47,13 @@
         .main-btn { width: 100%; padding: 12px; background-color: var(--primary); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
         .main-btn:hover { background-color: var(--primary-hover); }
         
+        /* 下拉選單 */
+        .autocomplete-wrapper { position: relative; flex: 1; }
+        .autocomplete-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background-color: #0f172a; border: 1px solid var(--primary); max-height: 200px; overflow-y: auto; z-index: 100; border-radius: 8px; display: none; box-shadow: 0 8px 16px rgba(0,0,0,0.5); }
+        .autocomplete-item { padding: 10px 12px; cursor: pointer; color: white; border-bottom: 1px solid var(--border); font-size: 13px; }
+        .autocomplete-item:last-child { border-bottom: none; }
+        .autocomplete-item:hover { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; }
+
         /* 統計面板 */
         .section-header { font-size: 16px; border-bottom: 2px solid var(--border); padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; margin-top: 25px; }
         .overall-luck-board { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
@@ -58,33 +65,92 @@
         .peak-item { display: flex; justify-content: space-between; font-size: 13px; font-weight: bold;}
         .peak-label-best { color: #4ade80; } .peak-label-spook { color: #ef4444; }
 
-        /* 稱號顏色設定 */
-        .title-god { color: #16a34a; font-weight: bold; } 
-        .title-lucky { color: #4ade80; } 
-        .title-plain { color: #facc15; } 
-        .title-unlucky { color: #fb923c; } 
-        .title-bad { color: #dc2626; } 
-
-        /* 長條圖 */
-        .chart-container { display: flex; align-items: flex-end; gap: 8px; height: 180px; padding: 25px 5px 5px 5px; overflow-x: auto; background-color: #0f172a; border-radius: 8px; border: 1px solid var(--border); }
-        .bar-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-width: 40px; height: 100%; }
-        .wai-circle { width: 18px; height: 18px; border-radius: 50%; color: white; font-size: 8px; display: flex; justify-content: center; align-items: center; margin-bottom: 4px; border: 1px solid #94a3b8; font-weight: bold; }
-        .circle-std { background: #475569; } .circle-lim { background: var(--primary); } .circle-oshi { background: var(--oshi-color); border-color: #fbcfe8;}
-        .bar-value { font-size: 10px; font-weight: bold; color: white; margin-bottom: 4px; }
-        .bar-fill { width: 25px; border-radius: 4px 4px 0 0; }
-        .bar-label { font-size: 8px; color: var(--text-sub); margin-top: 6px; max-width: 40px; overflow: hidden; text-align: center; }
-
-        /* 歷史紀錄 */
-        .record-card { background-color: #0f172a; border: 1px solid var(--border); padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-        .record-info h4 { margin: 0 0 6px 0; font-size: 13px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; color: white;} 
-        .record-info p { margin: 0; font-size: 11px; color: var(--text-sub); display: flex; align-items: center; gap: 4px; flex-wrap: wrap;}
-        .tag { padding: 2px 5px; border-radius: 4px; font-size: 9px; color: white; }
-        .tag-lim { background: var(--limited-color); } .tag-re { background: var(--rerun-color); } .tag-std { background: #475569; } .tag-oshi { background: var(--oshi-color); }
-        .tag-target { background: var(--primary); }
-        .del-btn { background: #ef4444; color: white; border: none; padding: 2px 6px; border-radius: 4px; font-size: 9px; cursor: pointer; margin-left: 5px;}
-        .luck-badge { padding: 4px 8px; border-radius: 12px; font-weight: bold; font-size: 11px; min-width: 55px; text-align: center; border: 1px solid; }
-        .lead-text { font-weight: bold; margin-right: 4px; display: flex; align-items: center; gap: 2px; color: #e2e8f0;}
-        .oshi-heart { color: var(--oshi-color); font-size: 10px;}
+        /* 單行橫向長條圖 */
+        .h-record-card { 
+            position: relative; 
+            background: #1e293b; 
+            border: 1px solid var(--border); 
+            border-radius: 8px; 
+            margin-bottom: 8px; 
+            overflow: hidden; 
+            display: flex; 
+            height: 48px; 
+        }
+        .h-bar-bg { 
+            position: absolute; 
+            left: 0; top: 0; bottom: 0; 
+            opacity: 1; 
+            z-index: 1; 
+            transition: width 0.5s ease-out; 
+        }
+        .h-content { 
+            position: relative; 
+            z-index: 2; 
+            padding: 0 12px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            width: 100%; 
+            box-sizing: border-box;
+        }
+        .h-left { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            flex: 1; 
+            overflow: hidden; 
+            white-space: nowrap; 
+        }
+        .h-right { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            flex-shrink: 0; 
+        }
+        .h-date { 
+            font-size: 12px; 
+            color: white;
+            font-family: monospace;
+        }
+        .h-tags { 
+            display: flex; 
+            gap: 4px; 
+        }
+        .tag { 
+            padding: 3px 6px; 
+            border-radius: 4px; 
+            font-size: 11px; 
+            color: white; 
+            font-weight: bold;
+        }
+        .tag-lim { background: var(--limited-color); } 
+        .tag-re { background: var(--rerun-color); }
+        .h-title { 
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+        .h-pulls { 
+            font-size: 12px; 
+            color: white; 
+            display: flex;
+            align-items: baseline;
+            gap: 3px;
+        }
+        .pull-num { 
+            font-size: 18px; 
+            font-weight: bold; 
+        }
+        .h-luck {
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            background: rgba(0,0,0,0.3); 
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+        .del-btn-icon { background: transparent; border: none; font-size: 14px; cursor: pointer; padding: 4px; opacity: 0.5; transition: 0.2s; }
+        .del-btn-icon:hover { opacity: 1; color: #ef4444; }
     </style>
 </head>
 <body>
@@ -130,11 +196,16 @@
     <div class="form-group">
         <label class="group-label">2. 卡池名稱與當期思念</label>
         <div style="display: flex; gap: 10px;">
-            <input type="text" id="bannerName" placeholder="點此選擇卡池" style="flex: 1;" list="bannerList" onchange="autoFillBannerInfo()">
-            <input type="text" id="upCardName" placeholder="以卡名反查卡池 🔍" style="flex: 1;" list="allCardsList" onchange="autoFillFromUpCard()">
+            <div class="autocomplete-wrapper">
+                <input type="text" id="bannerName" placeholder="點此選擇卡池" autocomplete="off" oninput="filterDropdown('bannerName')" onfocus="showDropdown('bannerName')" onblur="hideDropdownDelayed('bannerName')">
+                <div id="bannerNameListWrapper" class="autocomplete-list"></div>
+            </div>
+            
+            <div class="autocomplete-wrapper">
+                <input type="text" id="upCardName" placeholder="以卡名反查卡池 🔍" autocomplete="off" oninput="filterDropdown('upCardName')" onfocus="showDropdown('upCardName')" onblur="hideDropdownDelayed('upCardName')">
+                <div id="upCardNameListWrapper" class="autocomplete-list"></div>
+            </div>
         </div>
-        <datalist id="bannerList"></datalist>
-        <datalist id="allCardsList"></datalist>
     </div>
 
     <div class="form-group">
@@ -147,8 +218,11 @@
                 <label class="radio-label"><input type="radio" name="pulledLead" value="秦徹" onchange="updatePulledCardList()"> 🚘</label>
                 <label class="radio-label"><input type="radio" name="pulledLead" value="夏以晝" onchange="updatePulledCardList()"> 🍎</label>
             </div>
-            <input type="text" id="cardName" placeholder="思念名稱 (選填)" style="flex: 1; min-width: 140px;" list="pulledCardList">
-            <datalist id="pulledCardList"></datalist>
+            
+            <div class="autocomplete-wrapper" style="min-width: 140px;">
+                <input type="text" id="cardName" placeholder="思念名稱" autocomplete="off" oninput="filterDropdown('cardName')" onfocus="showDropdown('cardName')" onblur="hideDropdownDelayed('cardName')">
+                <div id="cardNameListWrapper" class="autocomplete-list"></div>
+            </div>
         </div>
     </div>
 
@@ -174,19 +248,60 @@
         <div class="luck-card" id="luckRe"><h5>復刻池體質</h5>---</div>
     </div>
 
-    <div id="chartContainer" class="chart-container"></div>
-
-    <div class="section-header">📜 歷史清單 <button onclick="clearAll()" style="background:none; border:none; color:#ef4444; font-size:11px; cursor:pointer;">清空</button></div>
+    <div class="section-header">📊 抽卡紀錄與長條圖 <button onclick="clearAll()" style="background:none; border:none; color:#ef4444; font-size:11px; cursor:pointer;">清空</button></div>
     <div id="recordList"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="love_and_deepspace_events.js"></script>
-<script src="love_and_deepspace_standard.js"></script>
+<script src="love_and_deepspace_standards.js"></script>
 <script src="ocr_parser.js"></script>
 
 <script>
     const leadIcons = {'祁煜':'🐟', '沈星回':'🌟', '黎深':'🍐', '秦徹':'🚘', '夏以晝':'🍎'};
+
+    let dropdownData = {
+        bannerName: [],
+        upCardName: [],
+        cardName: []
+    };
+
+    function renderDropdown(inputId) {
+        const wrapper = document.getElementById(inputId + 'ListWrapper');
+        const input = document.getElementById(inputId);
+        const val = input.value.toLowerCase();
+        const list = dropdownData[inputId];
+
+        wrapper.innerHTML = '';
+        let count = 0;
+
+        for (const item of list) {
+            if (item.toLowerCase().includes(val)) {
+                const div = document.createElement('div');
+                div.className = 'autocomplete-item';
+                div.innerText = item;
+                div.onmousedown = function() { 
+                    input.value = item;
+                    wrapper.style.display = 'none';
+                    if (inputId === 'bannerName') autoFillBannerInfo();
+                    if (inputId === 'upCardName') autoFillFromUpCard();
+                };
+                wrapper.appendChild(div);
+                count++;
+            }
+        }
+        
+        wrapper.style.display = count > 0 ? 'block' : 'none';
+    }
+
+    function filterDropdown(inputId) { renderDropdown(inputId); }
+    function showDropdown(inputId) { renderDropdown(inputId); }
+    function hideDropdownDelayed(inputId) {
+        setTimeout(() => {
+            const wrapper = document.getElementById(inputId + 'ListWrapper');
+            if(wrapper) wrapper.style.display = 'none';
+        }, 150);
+    }
 
     function toggleOshiEdit() {
         const group = document.getElementById('oshiGroup');
@@ -222,22 +337,33 @@
         updateOshiSummary();
     }
 
+    function parseEventTime(e) {
+        try {
+            const startStr = e.duration.split('-')[0]; 
+            const [m, d] = startStr.split('.');
+            if (!m || !d) return 0;
+            return new Date(`${e.year}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T00:00:00`).getTime();
+        } catch(err) {
+            return 0; 
+        }
+    }
+
     function initEventData() {
         if (typeof eventCards === 'undefined') return;
-        const allCardsList = document.getElementById('allCardsList');
-        let allCards = new Set();
-
+        
+        let cardsWithTime = [];
         eventCards.forEach(e => {
+            const t = parseEventTime(e);
             Object.values(e.cards).forEach(cards => {
-                cards.forEach(c => allCards.add(c));
+                cards.forEach(c => cardsWithTime.push({ name: c, time: t }));
             });
         });
-
-        allCards.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c;
-            allCardsList.appendChild(opt);
-        });
+        
+        cardsWithTime.sort((a, b) => b.time - a.time);
+        
+        let uniqueCards = new Set();
+        cardsWithTime.forEach(c => uniqueCards.add(c.name));
+        dropdownData.upCardName = Array.from(uniqueCards);
 
         onPoolChange(); 
     }
@@ -247,10 +373,8 @@
         
         const mainPool = document.querySelector('input[name="mainPool"]:checked').value;
         const subPool = document.querySelector('input[name="subPool"]:checked').value;
-        const bannerList = document.getElementById('bannerList');
         
-        bannerList.innerHTML = '';
-        let filteredBanners = new Set();
+        let filtered = [];
         
         eventCards.forEach(e => {
             const isRerun = e.poolType.includes('復刻');
@@ -264,15 +388,15 @@
             if (subPool === '單人' && (e.poolType.includes('單人') || e.poolType.includes('生日') || e.poolType.includes('免五') || e.poolType === '復刻')) matchSub = true;
             
             if (matchSub) {
-                filteredBanners.add(e.eventName);
+                filtered.push({ name: e.eventName, time: parseEventTime(e) });
             }
         });
         
-        filteredBanners.forEach(b => {
-            const opt = document.createElement('option');
-            opt.value = b;
-            bannerList.appendChild(opt);
-        });
+        filtered.sort((a, b) => b.time - a.time);
+        
+        let uniqueBanners = new Set();
+        filtered.forEach(f => uniqueBanners.add(f.name));
+        dropdownData.bannerName = Array.from(uniqueBanners);
     }
 
     function onPoolChange() {
@@ -280,25 +404,44 @@
         updatePulledCardList();        
     }
 
-    // 將這個函式掛載在 window 下，方便 OCR 取用
     window.autoFillFromUpCard = function() {
         const upCardName = document.getElementById('upCardName').value;
         if (!upCardName || typeof eventCards === 'undefined') return;
         
-        const event = eventCards.find(e => {
+        const currentMainPool = document.querySelector('input[name="mainPool"]:checked').value;
+        
+        const matchingEvents = eventCards.filter(e => {
             return Object.values(e.cards).some(cards => cards.includes(upCardName));
         });
         
-        if (event) {
-            document.getElementById('bannerName').value = event.eventName;
-            window.autoFillBannerInfo(); 
+        if (matchingEvents.length > 0) {
+            let bestEvent = matchingEvents.find(e => 
+                (currentMainPool === '復刻' && e.poolType.includes('復刻')) ||
+                (currentMainPool === '限定' && !e.poolType.includes('復刻'))
+            );
+            
+            if (!bestEvent) bestEvent = matchingEvents[0];
+
+            document.getElementById('bannerName').value = bestEvent.eventName;
+            window.autoFillBannerInfo(bestEvent); 
         }
     }
 
-    window.autoFillBannerInfo = function() {
+    window.autoFillBannerInfo = function(forcedEvent = null) {
         const bannerName = document.getElementById('bannerName').value;
         if (typeof eventCards === 'undefined') return;
-        const event = eventCards.find(e => e.eventName === bannerName);
+        
+        let event = forcedEvent;
+        if (!event) {
+            const currentMainPool = document.querySelector('input[name="mainPool"]:checked').value;
+            const matches = eventCards.filter(e => e.eventName === bannerName);
+            event = matches.find(e => 
+                (currentMainPool === '復刻' && e.poolType.includes('復刻')) ||
+                (currentMainPool === '限定' && !e.poolType.includes('復刻'))
+            );
+            if (!event) event = matches[0];
+        }
+
         if (event) {
             if(event.poolType.includes('復刻')) document.querySelector('input[name="mainPool"][value="復刻"]').checked = true;
             else document.querySelector('input[name="mainPool"][value="限定"]').checked = true;
@@ -317,31 +460,24 @@
         onPoolChange();
     }
 
-    // 將這個函式掛載在 window 下，方便 OCR 取用
     window.updatePulledCardList = function() {
         const bannerName = document.getElementById('bannerName').value;
         const pulledLead = document.querySelector('input[name="pulledLead"]:checked').value;
-        const list = document.getElementById('pulledCardList');
-        list.innerHTML = '';
         
-        let options = new Set();
+        let options = [];
         
         if (bannerName && typeof eventCards !== 'undefined') {
             const event = eventCards.find(e => e.eventName === bannerName);
-            if (event && event.cards[pulledLead]) {
-                event.cards[pulledLead].forEach(c => options.add(c));
+            if (event && event.cards && event.cards[pulledLead]) {
+                options.push(...event.cards[pulledLead]);
             }
         }
 
         if (typeof standardCards !== 'undefined' && standardCards[pulledLead]) {
-            standardCards[pulledLead].forEach(c => options.add(c));
+            options.push(...standardCards[pulledLead]);
         }
         
-        options.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c;
-            list.appendChild(opt);
-        });
+        dropdownData.cardName = Array.from(new Set(options));
     }
 
     function getEventDate(eventName, mainPool) {
@@ -355,15 +491,7 @@
             else target = matches.find(e => !e.poolType.includes('復刻')) || matches[0];
         }
 
-        try {
-            const startStr = target.duration.split('-')[0]; 
-            const [m, d] = startStr.split('.');
-            if (!m || !d) return 0;
-            const dateStr = `${target.year}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T00:00:00`;
-            return new Date(dateStr).getTime();
-        } catch(e) {
-            return 0; 
-        }
+        return parseEventTime(target);
     }
 
     const judgeS = (p) => {
@@ -433,7 +561,6 @@
         document.getElementById('cardName').value = '';
         document.getElementById('pulls').value = '';
         
-        // 為了方便連續輸入，重置上傳檔案欄位
         document.getElementById('ocrInput').value = '';
         document.getElementById('ocrStatus').innerText = "請上傳抽卡紀錄";
         document.getElementById('ocrStatus').style.color = "var(--text-sub)";
@@ -503,42 +630,64 @@
             document.getElementById('peakBoard').innerHTML = `<div style="text-align:center;font-size:12px;color:#94a3b8">尚無資料</div>`;
         }
 
-        const chart = document.getElementById('chartContainer');
-        chart.innerHTML = '';
-        [...db].reverse().forEach(r => {
-            const h = (r.pulls / 70) * 100;
-            const wrap = document.createElement('div'); wrap.className = 'bar-wrapper';
-            
-            let iconStr = '🎯'; let circleClass = 'circle-lim';
-            if(r.res === 'wai') { iconStr = '💔'; circleClass = 'circle-std'; }
-            if(r.res === 'oshi_spook') { iconStr = '💖'; circleClass = 'circle-oshi'; } 
-            
-            wrap.innerHTML = `<div class="wai-circle ${circleClass}">${iconStr}</div>
-                              <div class="bar-value">${r.pulls}</div>
-                              <div class="bar-fill" style="height:${h}%; background:${r.luck.c}"></div>
-                              <div class="bar-label" title="${r.banner}">${r.banner.substring(0,2)}..</div>`;
-            chart.appendChild(wrap);
-        });
-
         document.getElementById('recordList').innerHTML = db.map(r => {
-            const icon = leadIcons[r.lead] || '';
-            const isOshi = oshis.includes(r.lead);
-            const leadStr = r.lead ? `<span class="lead-text">${isOshi?'<span class="oshi-heart">💖</span>':''}${icon} ${r.lead}</span>` : '';
+            let cardTypeStr = '';
+            let statusColor = '#94a3b8';
 
-            let statusText = '定向'; let statusClass = 'tag-target';
-            if(r.res === 'wai') { statusText = '歪常駐'; statusClass = 'tag-std'; }
-            if(r.res === 'oshi_spook') { statusText = '主推防歪'; statusClass = 'tag-oshi'; }
-            
-            const cardDisplay = r.card ? ` | ${r.card}` : '';
-            const dateTip = r._sortTime !== r.id ? `<span style="font-size:10px; color:#94a3b8; margin-right:4px;">[${new Date(r._sortTime).getFullYear().toString().slice(2)}/${(new Date(r._sortTime).getMonth()+1).toString().padStart(2,'0')}]</span>` : '';
+            if (r.res === 'target') {
+                cardTypeStr = '🎯 限定 UP';
+                statusColor = 'var(--primary)';
+            } else {
+                let isStandard = false;
+                if (typeof standardCards !== 'undefined' && standardCards[r.lead] && standardCards[r.lead].includes(r.card)) {
+                    isStandard = true;
+                }
+                
+                if (isStandard) {
+                    cardTypeStr = '💔 歪常駐';
+                    statusColor = '#475569';
+                } else if (r.sub === '混池') {
+                    cardTypeStr = '💔 歪其他限定';
+                    statusColor = '#ef4444';
+                } else {
+                    cardTypeStr = '💔 歪卡';
+                    statusColor = '#ef4444';
+                }
+
+                if (r.res === 'oshi_spook') {
+                    cardTypeStr = '💖 防歪主推 (' + cardTypeStr.replace('💔 ', '') + ')';
+                    statusColor = 'var(--oshi-color)';
+                }
+            }
+
+            const dateStr = r._sortTime !== r.id ? `[${new Date(r._sortTime).getFullYear().toString().slice(2)}/${(new Date(r._sortTime).getMonth()+1).toString().padStart(2,'0')}]` : '[未知]';
+            const barWidth = Math.min((r.pulls / 70) * 100, 100);
 
             return `
-            <div class="record-card">
-                <div class="record-info">
-                    <h4><span class="tag ${r.main==='限定'?'tag-lim':'tag-re'}">${r.main}${r.sub}</span><span class="tag ${statusClass}">${statusText}</span> ${dateTip}${r.banner}</h4>
-                    <p>${leadStr}${cardDisplay} | <b>${r.pulls}抽</b> ${r.res==='target' ? '(總結算 '+r.total+' 抽)' : ''} <button class="del-btn" onclick="deleteRec(${r.id})">刪除</button></p>
+            <div class="h-record-card">
+                <div class="h-bar-bg" style="width: ${barWidth}%; background-color: ${r.luck.c};"></div>
+                
+                <div class="h-content">
+                    <div class="h-left">
+                        <div class="h-tags">
+                            ${r.main === '復刻' ? '<span class="tag tag-re">復刻</span>' : ''}
+                            <span class="tag tag-lim">${r.sub}</span>
+                            <span class="tag" style="background-color: ${statusColor};">${cardTypeStr}</span>
+                        </div>
+                        
+                        <span class="h-title">
+                            <span style="font-size: 15px; font-weight: bold; color: white;">${r.card || '未知'}</span>
+                            <span style="font-size: 12px; color: white; font-weight: normal;"> | ${r.banner}</span>
+                            <span class="h-date" style="font-size: 12px;">${dateStr}</span>
+                        </span>
+                    </div>
+                    
+                    <div class="h-right">
+                        <div class="h-pulls"><span class="pull-num">${r.pulls}</span> 抽</div>
+                        <div class="h-luck">${r.luck.t}</div>
+                        <button class="del-btn-icon" onclick="deleteRec(${r.id})" title="刪除紀錄">🗑️</button>
+                    </div>
                 </div>
-                <div class="luck-badge" style="border-color:${r.luck.c}; color:${r.luck.c}">${r.luck.t}</div>
             </div>
             `;
         }).join('');
