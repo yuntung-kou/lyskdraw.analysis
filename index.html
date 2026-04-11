@@ -9,126 +9,124 @@
 <body>
 
 <div class="container">
-    <div class="title-row">
-        <h1>✨ 抽卡紀錄分析器</h1>
+    <div class="header-section">
         <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">☀️</button>
-    </div>
-    <p class="subtitle">抽卡體質鑑定🙌</p>
-
-    <!-- 主推設定面板 -->
-    <div class="oshi-box">
-        <div class="oshi-header">
-            <label id="oshiSummary">💖 主推守護中：</label>
-            <button id="oshiToggleBtn" onclick="toggleOshiEdit()" style="background:none; border:none; color:var(--oshi-color); font-size:12px; cursor:pointer; padding:0; font-weight:bold;">[設定]</button>
-        </div>
-        <div class="radio-group" id="oshiGroup" style="display: none; margin-top: 10px;">
-            <label class="radio-label oshi-label"><input type="checkbox" name="oshi" value="祁煜" onchange="saveOshis()"> 🐟 祁煜</label>
-            <label class="radio-label oshi-label"><input type="checkbox" name="oshi" value="沈星回" onchange="saveOshis()"> 🌟 沈星回</label>
-            <label class="radio-label oshi-label"><input type="checkbox" name="oshi" value="黎深" onchange="saveOshis()"> 🍐 黎深</label>
-            <label class="radio-label oshi-label"><input type="checkbox" name="oshi" value="秦徹" onchange="saveOshis()"> 🚘 秦徹</label>
-            <label class="radio-label oshi-label"><input type="checkbox" name="oshi" value="夏以晝" onchange="saveOshis()"> 🍎 夏以晝</label>
-        </div>
+        <h1>✨ 抽卡紀錄分析器</h1>
+        <p class="subtitle">抽卡體質鑑定🙌</p>
     </div>
 
-    <!-- 墊池計數面板 -->
-    <div class="pending-board">
-        <div class="pending-item pending-lim" onclick="editPending('lim')">限定池必出UP ✏️<span id="pLim">140</span></div>
-        <div class="pending-item pending-re" onclick="editPending('re')">復刻池必出UP ✏️<span id="pRe">140</span></div>
-    </div>
-
-    <!-- OCR 自動辨識區 -->
-    <div class="form-group ocr-box">
-        <label class="group-label" style="color: var(--title-color);">📸 自動輔助：上傳抽卡紀錄截圖</label>
-        <input type="file" id="ocrInput" accept="image/*" multiple onchange="handleOCR(event)" style="padding: 5px 0; font-size: 13px; border: none; background: transparent; color: var(--text-sub);">
-        <div id="ocrStatus" style="font-size: 12px; margin-top: 6px; font-weight: bold; color: var(--text-sub);">請上傳抽卡紀錄</div>
-    </div>
-
-    <!-- 表單：卡池種類 -->
-    <div class="form-group">
-        <label class="group-label">1. 卡池種類</label>
-        <div style="display: flex; gap: 10px; margin-top: 4px;">
-            <div class="radio-group" style="margin-top: 0;">
-                <label class="radio-label"><input type="radio" name="mainPool" value="限定" checked onchange="onPoolChange()"> 💠 限定</label>
-                <label class="radio-label"><input type="radio" name="mainPool" value="復刻" onchange="onPoolChange()"> 🔄 復刻</label>
+    <div class="main-layout">
+        
+        <div class="left-col">
+            <div class="oshi-box">
+                <div class="oshi-header">
+                    <label id="oshiSummary">💖 主推守護中：</label>
+                    <button id="oshiToggleBtn" onclick="toggleOshiEdit()" style="background:none; border:none; color:var(--oshi-color); font-size:12px; cursor:pointer; padding:0; font-weight:bold;">[設定]</button>
+                </div>
+                <div class="radio-group" id="oshiGroup" style="display: none; margin-top: 10px;">
+                    <label class="radio-label oshi-label"><input type="checkbox" name="oshi" value="祁煜" onchange="saveOshis()"> 🐟 祁煜</label>
+                    <label class="radio-label oshi-label"><input type="checkbox" name="oshi" value="沈星回" onchange="saveOshis()"> 🌟 沈星回</label>
+                    <label class="radio-label oshi-label"><input type="checkbox" name="oshi" value="黎深" onchange="saveOshis()"> 🍐 黎深</label>
+                    <label class="radio-label oshi-label"><input type="checkbox" name="oshi" value="秦徹" onchange="saveOshis()"> 🚘 秦徹</label>
+                    <label class="radio-label oshi-label"><input type="checkbox" name="oshi" value="夏以晝" onchange="saveOshis()"> 🍎 夏以晝</label>
+                </div>
             </div>
-            <div class="radio-group" style="margin-top: 0;">
-                <label class="radio-label"><input type="radio" name="subPool" value="單人" checked onchange="onPoolChange()"> 👤 單人</label>
-                <label class="radio-label"><input type="radio" name="subPool" value="日卡" onchange="onPoolChange()"> ☀️ 日卡</label>
-                <label class="radio-label"><input type="radio" name="subPool" value="混池" onchange="onPoolChange()"> 👥 混池</label>
+
+            <div class="pending-board">
+                <div class="pending-item pending-lim" onclick="editPending('lim')">限定池必出UP ✏️<span id="pLim">140</span></div>
+                <div class="pending-item pending-re" onclick="editPending('re')">復刻池必出UP ✏️<span id="pRe">140</span></div>
             </div>
-        </div>
-    </div>
 
-    <!-- 表單：卡池名稱 -->
-    <div class="form-group">
-        <label class="group-label">2. 卡池名稱與當期思念</label>
-        <div style="display: flex; gap: 10px;">
-            <div class="autocomplete-wrapper">
-                <input type="text" id="bannerName" placeholder="點此選擇卡池" autocomplete="off" oninput="filterDropdown('bannerName')" onfocus="showDropdown('bannerName')" onblur="hideDropdownDelayed('bannerName')">
-                <div id="bannerNameListWrapper" class="autocomplete-list"></div>
+            <div class="form-group ocr-box">
+                <label class="group-label" style="color: var(--title-color);">📸 自動輔助：上傳抽卡紀錄截圖</label>
+                <input type="file" id="ocrInput" accept="image/*" multiple onchange="handleOCR(event)" style="padding: 5px 0; font-size: 13px; border: none; background: transparent; color: var(--text-sub);">
+                <div id="ocrStatus" style="font-size: 12px; margin-top: 6px; font-weight: bold; color: var(--text-sub);">請上傳抽卡紀錄</div>
             </div>
-            <div class="autocomplete-wrapper">
-                <input type="text" id="upCardName" placeholder="以卡名反查卡池 🔍" autocomplete="off" oninput="filterDropdown('upCardName')" onfocus="showDropdown('upCardName')" onblur="hideDropdownDelayed('upCardName')">
-                <div id="upCardNameListWrapper" class="autocomplete-list"></div>
+
+            <div class="form-group">
+                <label class="group-label">1. 卡池種類</label>
+                <div style="display: flex; gap: 10px; margin-top: 4px;">
+                    <div class="radio-group" style="margin-top: 0;">
+                        <label class="radio-label"><input type="radio" name="mainPool" value="限定" checked onchange="onPoolChange()"> 💠 限定</label>
+                        <label class="radio-label"><input type="radio" name="mainPool" value="復刻" onchange="onPoolChange()"> 🔄 復刻</label>
+                    </div>
+                    <div class="radio-group" style="margin-top: 0;">
+                        <label class="radio-label"><input type="radio" name="subPool" value="單人" checked onchange="onPoolChange()"> 👤 單人</label>
+                        <label class="radio-label"><input type="radio" name="subPool" value="日卡" onchange="onPoolChange()"> ☀️ 日卡</label>
+                        <label class="radio-label"><input type="radio" name="subPool" value="混池" onchange="onPoolChange()"> 👥 混池</label>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
 
-    <!-- 表單：獲得對象 -->
-    <div class="form-group">
-        <label class="group-label">3. 獲得對象與思念名稱</label>
-        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
-            <div class="radio-group" style="margin-top: 0; margin-bottom: 0;">
-                <label class="radio-label"><input type="radio" name="pulledLead" value="祁煜" checked onchange="updatePulledCardList()"> 🐟</label>
-                <label class="radio-label"><input type="radio" name="pulledLead" value="沈星回" onchange="updatePulledCardList()"> 🌟</label>
-                <label class="radio-label"><input type="radio" name="pulledLead" value="黎深" onchange="updatePulledCardList()"> 🍐</label>
-                <label class="radio-label"><input type="radio" name="pulledLead" value="秦徹" onchange="updatePulledCardList()"> 🚘</label>
-                <label class="radio-label"><input type="radio" name="pulledLead" value="夏以晝" onchange="updatePulledCardList()"> 🍎</label>
+            <div class="form-group">
+                <label class="group-label">2. 卡池名稱與當期思念</label>
+                <div style="display: flex; gap: 10px;">
+                    <div class="autocomplete-wrapper">
+                        <input type="text" id="bannerName" placeholder="點此選擇卡池" autocomplete="off" oninput="filterDropdown('bannerName')" onfocus="showDropdown('bannerName')" onblur="hideDropdownDelayed('bannerName')">
+                        <div id="bannerNameListWrapper" class="autocomplete-list"></div>
+                    </div>
+                    <div class="autocomplete-wrapper">
+                        <input type="text" id="upCardName" placeholder="以卡名反查卡池 🔍" autocomplete="off" oninput="filterDropdown('upCardName')" onfocus="showDropdown('upCardName')" onblur="hideDropdownDelayed('upCardName')">
+                        <div id="upCardNameListWrapper" class="autocomplete-list"></div>
+                    </div>
+                </div>
             </div>
-            <div class="autocomplete-wrapper" style="min-width: 140px;">
-                <input type="text" id="cardName" placeholder="思念名稱" autocomplete="off" oninput="filterDropdown('cardName')" onfocus="showDropdown('cardName')" onblur="hideDropdownDelayed('cardName')">
-                <div id="cardNameListWrapper" class="autocomplete-list"></div>
+
+            <div class="form-group">
+                <label class="group-label">3. 獲得對象與思念名稱</label>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+                    <div class="radio-group" style="margin-top: 0; margin-bottom: 0;">
+                        <label class="radio-label"><input type="radio" name="pulledLead" value="祁煜" checked onchange="updatePulledCardList()"> 🐟</label>
+                        <label class="radio-label"><input type="radio" name="pulledLead" value="沈星回" onchange="updatePulledCardList()"> 🌟</label>
+                        <label class="radio-label"><input type="radio" name="pulledLead" value="黎深" onchange="updatePulledCardList()"> 🍐</label>
+                        <label class="radio-label"><input type="radio" name="pulledLead" value="秦徹" onchange="updatePulledCardList()"> 🚘</label>
+                        <label class="radio-label"><input type="radio" name="pulledLead" value="夏以晝" onchange="updatePulledCardList()"> 🍎</label>
+                    </div>
+                    <div class="autocomplete-wrapper" style="min-width: 140px;">
+                        <input type="text" id="cardName" placeholder="思念名稱" autocomplete="off" oninput="filterDropdown('cardName')" onfocus="showDropdown('cardName')" onblur="hideDropdownDelayed('cardName')">
+                        <div id="cardNameListWrapper" class="autocomplete-list"></div>
+                    </div>
+                </div>
             </div>
+
+            <div class="form-group">
+                <label class="group-label">4. 花費抽數 (1~70)</label>
+                <input type="number" id="pulls" placeholder="距離上次出金花費抽數" style="width: 100%;" min="1" max="70" onkeydown="if(event.key === 'Enter') addRecord()">
+            </div>
+
+            <button class="main-btn" onclick="addRecord()">新增紀錄 📝</button>
         </div>
-    </div>
 
-    <!-- 表單：抽數 -->
-    <div class="form-group">
-        <label class="group-label">4. 花費抽數 (1~70)</label>
-        <input type="number" id="pulls" placeholder="距離上次出金花費抽數" style="width: 100%;" min="1" max="70" onkeydown="if(event.key === 'Enter') addRecord()">
-    </div>
 
-    <button class="main-btn" onclick="addRecord()">新增紀錄 📝</button>
+        <div class="right-col">
+            <div class="section-header">📊 體質鑑定與巔峰榜</div>
+            <div class="peak-board" id="peakBoard"></div>
 
-    <!-- 統計面板 -->
-    <div class="section-header" style="margin-top: 30px;">📊 體質鑑定與巔峰榜</div>
-    <div class="peak-board" id="peakBoard"></div>
+            <div class="overall-luck-board">
+                <div class="luck-card">
+                    <select id="mainPoolLuckSelect" class="luck-select" onchange="updateLuckStats()">
+                        <option value="綜合">綜合體質</option>
+                        <option value="限定" selected>限定池體質</option>
+                        <option value="復刻">復刻池體質</option>
+                    </select>
+                    <div id="luckMainVal" style="font-weight: bold;">---</div>
+                </div>
+                <div class="luck-card">
+                    <select id="subPoolLuckSelect" class="luck-select" onchange="updateLuckStats()">
+                        <option value="單人" selected>單人池體質</option>
+                        <option value="日卡">日卡池體質</option>
+                        <option value="混池">混池體質</option>
+                    </select>
+                    <div id="subPoolLuckVal" style="font-weight: bold;">---</div>
+                </div>
+            </div>
 
-    <div class="overall-luck-board">
-        <div class="luck-card">
-            <select id="mainPoolLuckSelect" class="luck-select" onchange="updateLuckStats()">
-                <option value="綜合">綜合體質</option>
-                <option value="限定" selected>限定池體質</option>
-                <option value="復刻">復刻池體質</option>
-            </select>
-            <div id="luckMainVal" style="font-weight: bold;">---</div>
+            <div class="section-header">📊 抽卡紀錄與長條圖 <button onclick="clearAll()" style="background:none; border:none; color:#ef4444; font-size:11px; cursor:pointer;">清空</button></div>
+            <div id="recordList"></div>
         </div>
-        <div class="luck-card">
-            <select id="subPoolLuckSelect" class="luck-select" onchange="updateLuckStats()">
-                <option value="單人" selected>單人池體質</option>
-                <option value="日卡">日卡池體質</option>
-                <option value="混池">混池體質</option>
-            </select>
-            <div id="subPoolLuckVal" style="font-weight: bold;">---</div>
-        </div>
-    </div>
 
-    <!-- 紀錄列表 -->
-    <div class="section-header">📊 抽卡紀錄與長條圖 <button onclick="clearAll()" style="background:none; border:none; color:#ef4444; font-size:11px; cursor:pointer;">清空</button></div>
-    <div id="recordList"></div>
-</div>
+    </div> </div>
 
-<!-- 外部函式庫與資料檔 -->
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="love_and_deepspace_events.js"></script>
 <script src="love_and_deepspace_standard.js"></script>
