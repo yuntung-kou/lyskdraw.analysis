@@ -45,7 +45,7 @@ body {
     transition: background-color 0.3s, color 0.3s;
 }
 
-/* 修改：為了容納雙欄，將 max-width 加寬至 1000px */
+/* 為了容納雙欄，將 max-width 加寬至 1000px */
 .container {
     max-width: 1000px; 
     width: 100%;
@@ -146,7 +146,7 @@ p.subtitle {
     padding: 12px;
     border-radius: 8px;
     border: 1px solid var(--border);
-    margin-bottom: 20px;
+    margin-bottom: 15px; /* 縮小一點以配合右欄的視覺密度 */
     font-size: 12px;
     font-weight: bold;
 }
