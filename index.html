@@ -18,6 +18,7 @@
             --limited-color: #3b82f6; 
             --rerun-color: #ec4899;     /* 粉色 */
             --oshi-color: #ec4899;      /* 粉色 */
+            --title-color: #c4b5fd;     /* 標題與OCR專屬淺紫色 */
         }
 
         [data-theme="light"] {
@@ -34,15 +35,15 @@
             /* 粉色改淺紫色 */
             --rerun-color: #a855f7;   
             --oshi-color: #a855f7;    
+            --title-color: #db2777;     /* 淺色模式維持深粉色 */
         }
 
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 15px; display: flex; justify-content: center; transition: background-color 0.3s, color 0.3s; }
         .container { max-width: 600px; width: 100%; background-color: var(--card-bg); padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 1px solid var(--border); transition: background-color 0.3s; }
         
         .title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-        /* 主標題放大為 24px */
-        h1 { text-align: center; color: #c4b5fd; margin: 0; font-size: 24px; flex-grow: 1; margin-left: 20px;}
-        [data-theme="light"] h1 { color: #db2777; }
+        /* 標題套用 --title-color 變數 */
+        h1 { text-align: center; color: var(--title-color); margin: 0; font-size: 24px; flex-grow: 1; margin-left: 20px;}
         .theme-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 0; }
         
         p.subtitle { text-align: center; color: var(--text-sub); font-size: 13px; margin-bottom: 20px; margin-top: 5px; }
@@ -83,6 +84,10 @@
         .autocomplete-item { padding: 10px 12px; cursor: pointer; color: var(--text-main); border-bottom: 1px solid var(--border); font-size: 13px; }
         .autocomplete-item:last-child { border-bottom: none; }
         .autocomplete-item:hover { background: rgba(139, 92, 246, 0.1); color: var(--primary); }
+
+        /* OCR 專屬區塊樣式 */
+        .ocr-box { background: rgba(139, 92, 246, 0.05); padding: 12px; border-radius: 8px; border: 1px dashed var(--title-color); margin-bottom: 20px; }
+        [data-theme="light"] .ocr-box { background: rgba(219, 39, 119, 0.05); }
 
         /* 統計面板 */
         .section-header { font-size: 16px; border-bottom: 2px solid var(--border); padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; margin-top: 25px; }
@@ -263,8 +268,8 @@
         <div class="pending-item pending-re" onclick="editPending('re')">復刻池必出UP ✏️<span id="pRe">140</span></div>
     </div>
 
-    <div class="form-group" style="background: rgba(139, 92, 246, 0.05); padding: 12px; border-radius: 8px; border: 1px dashed var(--primary); margin-bottom: 20px;">
-        <label class="group-label" style="color: var(--primary);">📸 自動輔助：上傳抽卡紀錄截圖</label>
+    <div class="form-group ocr-box">
+        <label class="group-label" style="color: var(--title-color);">📸 自動輔助：上傳抽卡紀錄截圖</label>
         <input type="file" id="ocrInput" accept="image/*" multiple onchange="handleOCR(event)" style="padding: 5px 0; font-size: 13px; border: none; background: transparent; color: var(--text-sub);">
         <div id="ocrStatus" style="font-size: 12px; margin-top: 6px; font-weight: bold; color: var(--text-sub);">請上傳抽卡紀錄</div>
     </div>
