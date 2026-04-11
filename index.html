@@ -104,7 +104,7 @@
         .h-right { 
             display: flex; 
             align-items: center; 
-            gap: 12px; 
+            gap: 8px; /* 固定距離 */
             flex-shrink: 0; 
         }
         .h-date { 
@@ -130,11 +130,15 @@
             align-items: baseline;
             gap: 6px;
         }
+        
+        /* 💡 右側排版嚴格對齊設定 */
         .h-pulls { 
             font-size: 12px; 
             color: white; 
             display: flex;
             align-items: baseline;
+            justify-content: flex-end; /* 抽數靠右對齊 */
+            width: 45px; /* 固定抽數區塊寬度 */
             gap: 3px;
         }
         .pull-num { 
@@ -145,11 +149,23 @@
             font-size: 12px;
             font-weight: bold;
             color: white;
-            background: rgba(0,0,0,0.3); 
-            padding: 4px 8px;
+            padding: 4px 0;
             border-radius: 6px;
+            width: 85px; /* 固定寬度，剛好容納四個字加圖標 */
+            text-align: center; /* 不足四個字時自動置中 */
+            box-sizing: border-box;
         }
-        .del-btn-icon { background: transparent; border: none; font-size: 14px; cursor: pointer; padding: 4px; opacity: 0.5; transition: 0.2s; }
+        .del-btn-icon { 
+            background: transparent; 
+            border: none; 
+            font-size: 14px; 
+            cursor: pointer; 
+            padding: 4px; 
+            opacity: 0.5; 
+            transition: 0.2s; 
+            width: 28px; /* 固定刪除按鈕寬度 */
+            text-align: center;
+        }
         .del-btn-icon:hover { opacity: 1; color: #ef4444; }
     </style>
 </head>
@@ -511,7 +527,6 @@
     const setP = (type, v) => { localStorage.setItem('p_' + type, v); renderUI(); };
 
     function editPending(type) {
-        // 修改提示文字，確保使用者輸入的是「已經墊了的抽數」
         const v = prompt("手動修改『已墊抽數』\n(請輸入您目前已經墊了幾抽，0~139)：", getP(type));
         if (v !== null && !isNaN(parseInt(v))) setP(type, parseInt(v));
     }
@@ -576,7 +591,6 @@
     }
 
     function renderUI() {
-        // 在 UI 顯示時，轉換為 140 - 已墊抽數
         document.getElementById('pLim').innerText = 140 - getP('lim');
         document.getElementById('pRe').innerText = 140 - getP('re');
         
@@ -663,6 +677,12 @@
             const dateStr = r._sortTime !== r.id ? `[${d.getFullYear().toString().slice(2)}/${(d.getMonth()+1).toString().padStart(2,'0')}]` : '[未知]';
             const barWidth = Math.min((r.pulls / 70) * 100, 100);
 
+            // 💡 體質動態底色邏輯
+            let luckBgStyle = 'rgba(0,0,0,0.3)';
+            if (r.pulls <= 55) {
+                luckBgStyle = r.luck.c + 'E6'; // 附加 E6 代表 90% 不透明度
+            }
+
             return `
             <div class="h-record-card">
                 <div class="h-bar-bg" style="width: ${barWidth}%; background-color: ${r.luck.c};"></div>
@@ -684,7 +704,7 @@
                     
                     <div class="h-right">
                         <div class="h-pulls"><span class="pull-num">${r.pulls}</span> 抽</div>
-                        <div class="h-luck">${r.luck.t}</div>
+                        <div class="h-luck" style="background: ${luckBgStyle};">${r.luck.t}</div>
                         <button class="del-btn-icon" onclick="deleteRec(${r.id})" title="刪除紀錄">🗑️</button>
                     </div>
                 </div>
