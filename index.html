@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>戀與深空 | 抽卡紀錄分析器</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -94,12 +94,12 @@
 
 
         <div class="right-col">
-            <div class="section-header">📊 體質鑑定與巔峰榜</div>
-
-            <div class="pending-board">
+            <div class="pending-board" style="margin-top: 0;">
                 <div class="pending-item pending-lim" onclick="editPending('lim')">限定池必出UP ✏️<span id="pLim">140</span></div>
                 <div class="pending-item pending-re" onclick="editPending('re')">復刻池必出UP ✏️<span id="pRe">140</span></div>
             </div>
+
+            <div class="section-header" style="margin-top: 5px;">📊 體質鑑定與巔峰榜</div>
 
             <div class="peak-board" id="peakBoard"></div>
 
@@ -118,7 +118,7 @@
                         <option value="日卡">日卡池體質</option>
                         <option value="混池">混池體質</option>
                     </select>
-                    <div id="subPoolLuckVal" style="font-weight: bold;">---</div>
+                    <div id="luckSubVal" style="font-weight: bold;">---</div>
                 </div>
             </div>
 
