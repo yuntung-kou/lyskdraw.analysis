@@ -1,10 +1,11 @@
 // ════════════════════════════════════════════════════════════
-//  app.js — 戀與深空抽卡分析器 (保底跳躍優化版)
+//  app.js — 戀與深空抽卡分析器 (全自動偵測保底版)
 // ════════════════════════════════════════════════════════════
 
-const leadIcons = {
-    '祁煜': '🐟', '沈星回': '🌟', '黎深': '🍐', '秦徹': '🚘', '夏以晝': '🍎'
-};
+const leadIcons = { '祁煜': '🐟', '沈星回': '🌟', '黎深': '🍐', '秦徹': '🚘', '夏以晝': '🍎' };
+
+// 💡 暫存 OCR 計算的墊底抽數，以防手動按「新增紀錄」時遺失
+window.currentPendingPulls = 0; 
 
 const getDB  = () => JSON.parse(localStorage.getItem('db_v4')) || [];
 const setDB  = (db) => localStorage.setItem('db_v4', JSON.stringify(db));
@@ -12,7 +13,6 @@ const getP   = (type) => parseInt(localStorage.getItem('p_' + type)) || 0;
 const _setP  = (type, v) => localStorage.setItem('p_' + type, v);
 const setP   = (type, v) => { _setP(type, v); renderUI(); };
 
-// --- 基礎介面功能 ---
 function initTheme() {
     let saved = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     document.documentElement.dataset.theme = saved;
@@ -53,7 +53,6 @@ function loadOshis() {
     updateOshiSummary();
 }
 
-// --- 卡池數據處理 ---
 function parseEventTime(e) {
     try {
         const startStr = e.duration.split('-')[0];
@@ -86,7 +85,6 @@ function onPoolChange() {
     updatePulledCardList();
 }
 
-// --- 自動完成選單 ---
 let dropdownData = { bannerName: [], upCardName: [], cardName: [] };
 function renderDropdown(inputId) {
     const wrapper = document.getElementById(inputId + 'ListWrapper');
@@ -159,8 +157,11 @@ window.updatePulledCardList = function() {
     dropdownData.cardName = [...new Set(options)];
 };
 
-// --- OCR 全自動填寫與保底判定 ---
-window.autoFillFromOCR = function(pulls, cardName, latestTime) {
+// 🌟 OCR 全自動填寫與保底邏輯運算
+window.autoFillFromOCR = function(pulls, cardName, latestTime, pendingPulls) {
+    // 記錄已經墊的抽數，讓後續 addRecord 不會洗掉進度
+    window.currentPendingPulls = pendingPulls || 0;
+
     document.getElementById('pulls').value = pulls;
     if (!cardName || cardName === '未知' || cardName.includes('未知卡名')) return;
     document.getElementById('cardName').value = cardName;
@@ -171,40 +172,54 @@ window.autoFillFromOCR = function(pulls, cardName, latestTime) {
 
     let matchedEvent = null;
     if (typeof eventCards !== 'undefined') {
-        const year = new Date(latestTime).getFullYear().toString();
-        // 如果是限定卡，精準對應活動
-        matchedEvent = eventCards.find(ev => ev.year === year && Object.values(ev.cards).some(c => c.includes(cardName)));
-        // 如果沒找到（歪常駐），利用「最新許願時間」反推當下活動
-        if (!matchedEvent) matchedEvent = eventCards.slice().reverse().find(ev => parseEventTime(ev) <= latestTime);
+        // 先找出所有包含這張限定卡的卡池
+        let possibleEvents = eventCards.filter(ev => Object.values(ev.cards).some(c => c.includes(cardName)));
+
+        if (possibleEvents.length > 0) {
+            // 用截圖時間找出精準年份
+            const year = latestTime ? new Date(latestTime).getFullYear().toString() : null;
+            matchedEvent = possibleEvents.find(ev => ev.year === year) || possibleEvents[0];
+        } else if (latestTime) {
+            // 如果這張卡是常駐卡，用截圖時間反推當下的卡池
+            matchedEvent = eventCards.slice().reverse().find(ev => parseEventTime(ev) <= latestTime);
+        }
     }
 
     if (matchedEvent) {
+        // 自動切換卡池類型
         const isRerun = matchedEvent.poolType.includes('復刻');
         document.querySelector(`input[name="mainPool"][value="${isRerun ? '復刻' : '限定'}"]`).checked = true;
+        
         if (matchedEvent.poolType.includes('混池')) document.querySelector('input[name="subPool"][value="混池"]').checked = true;
         else if (matchedEvent.poolType.includes('日卡')) document.querySelector('input[name="subPool"][value="日卡"]').checked = true;
         else document.querySelector('input[name="subPool"][value="單人"]').checked = true;
+        
+        // 自動帶入卡池名稱
         document.getElementById('bannerName').value = matchedEvent.eventName;
     }
 
+    // 自動切換男主 Icon
     if (!foundLead && matchedEvent) {
         for (const lead in matchedEvent.cards) { if (matchedEvent.cards[lead].includes(cardName)) { foundLead = lead; break; } }
     }
-    if (foundLead) document.querySelector(`input[name="pulledLead"][value="${foundLead}"]`).checked = true;
+    if (foundLead) {
+        const radio = document.querySelector(`input[name="pulledLead"][value="${foundLead}"]`);
+        if (radio) radio.checked = true;
+    }
 
-    // 🌟 OCR 自動更新進度：判斷是大保底(70)還是重置(0)
+    // 🌟 數學公式更新：若 最新五星=常駐卡，則70-已抽，else (非常駐=限定)，則140-已抽
     const poolKey = (matchedEvent?.poolType.includes('復刻')) ? 're' : 'lim';
     let isUpCard = false;
     if (matchedEvent && foundLead) isUpCard = matchedEvent.cards[foundLead]?.includes(cardName);
     
-    // 如果是目標UP卡，進度設0 (必出剩140)；如果是歪卡/常駐卡，進度設70 (大保底必出剩70)
-    setP(poolKey, isUpCard ? 0 : 70);
+    // progress 代表從上次歸零後累積的抽數
+    const progress = isUpCard ? window.currentPendingPulls : (70 + window.currentPendingPulls);
+    setP(poolKey, progress);
 
     onPoolChange();
     updatePulledCardList();
 };
 
-// --- 紀錄新增與保底跳躍邏輯 ---
 const judgeS = (p) => p <= 7 ? { t: '天選之子 ✨', c: '#16a34a', s: 2 } : p <= 24 ? { t: '幸運兒 🌟', c: '#4ade80', s: 1 } : p <= 35 ? { t: '平凡人 😐', c: '#facc15', s: 0 } : p <= 45 ? { t: '小不幸運 🌧️', c: '#fb923c', s: -1 } : { t: '小倒霉鬼 🌩️', c: '#dc2626', s: -2 };
 const judgeT = (p) => p <= 26 ? { t: '天選之子 ✨', c: '#16a34a', s: 2 } : p <= 65 ? { t: '幸運兒 🌟', c: '#4ade80', s: 1 } : p <= 85 ? { t: '平凡人 😐', c: '#facc15', s: 0 } : p <= 110 ? { t: '小不幸運 🌧️', c: '#fb923c', s: -1 } : { t: '小倒霉鬼 🌩️', c: '#dc2626', s: -2 };
 
@@ -228,7 +243,6 @@ function addRecord() {
     const isUpCard = event && event.cards[pulledLead] && (!card || event.cards[pulledLead].includes(card));
     const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
 
-    // 判定紀錄類型
     let judgeResult = isUpCard ? (sub === '混池' && oshis.length > 0 && !oshis.includes(pulledLead) ? 'wai_lim' : 'target') : (oshis.includes(pulledLead) ? 'oshi_spook' : 'wai_std');
     const poolKey = main === '限定' ? 'lim' : 're';
     const currentP = getP(poolKey);
@@ -236,20 +250,22 @@ function addRecord() {
 
     if (judgeResult === 'target') {
         rec.total = currentP + pulls; rec.luck = judgeT(rec.total);
-        _setP(poolKey, 0); // 🎯 抽中目標：進度重置為 0 (必出剩 140)
+        // 保留 OCR 讀到的待判定抽數
+        _setP(poolKey, window.currentPendingPulls); 
     } else {
         rec.total = pulls; rec.luck = judgeS(pulls);
-        // ☠️ 判定是否歪常駐：如果是常駐卡，進度直接跳到 70 (必出剩 70)
         const isStandard = typeof standardCards !== 'undefined' && Object.values(standardCards).flat().includes(card);
-        _setP(poolKey, isStandard ? 70 : currentP + pulls);
+        _setP(poolKey, isStandard ? (70 + window.currentPendingPulls) : (currentP + pulls));
     }
+
+    // 消耗完後歸零，避免手動輸入時干擾
+    window.currentPendingPulls = 0; 
 
     let db = getDB(); db.push(rec); setDB(db);
     document.getElementById('cardName').value = ''; document.getElementById('pulls').value = '';
     renderUI();
 }
 
-// --- UI 渲染與統計 ---
 function deleteRec(id) { if (confirm('確定刪除此筆紀錄？')) { setDB(getDB().filter(r => r.id !== id)); renderUI(); } }
 function clearAll() { if (confirm('確定清空所有資料？')) { localStorage.removeItem('db_v4'); _setP('lim', 0); _setP('re', 0); renderUI(); } }
 
@@ -336,5 +352,4 @@ function renderUI() {
     }).join('');
 }
 
-// 初始化
 initTheme(); loadOshis(); updateBannerRecommendations(); renderUI();
