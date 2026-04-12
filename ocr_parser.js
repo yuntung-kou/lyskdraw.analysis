@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════
-//  ocr_parser.js — 智慧行合併 + 特徵防丟失版 (v21)
+//  ocr_parser.js — 智慧行合併 + 特徵防丟失版 (v22 - 參數傳遞修復)
 // ═══════════════════════════════════════════════════════════
 
 async function handleOCR(event) {
@@ -17,7 +17,6 @@ async function handleOCR(event) {
             
             if (records.length < 5) warnings.push(`第 ${i + 1} 張僅讀取到 ${records.length} 筆`);
             if (records.length > 0) {
-                // 為整個 page 找一個最具代表性的時間，避免頂部時間糊掉導致整頁順序錯亂
                 const validTimeRecord = records.find(r => r._hasRealTime);
                 records._pageTime = validTimeRecord ? validTimeRecord.time : 0;
                 pages.push(records);
@@ -25,20 +24,24 @@ async function handleOCR(event) {
         }
         if (pages.length === 0) { statusEl.innerText = '⚠️ 未能辨識，請確認截圖清晰'; statusEl.style.color = '#facc15'; return; }
 
-        // 使用頁面內的有效時間來排序整個頁面
         pages.sort((a, b) => b._pageTime - a._pageTime);
         const allRecords = pages.flat();
         const result = countPulls(allRecords);
 
         if (result.pullEvents.length > 0) {
-            const firstGold = result.pullEvents[result.pullEvents.length - 1];
-            
+            // 💡 取得最新的一次五星紀錄與墊抽數
+            const targetGold = result.pullEvents[0]; 
+            const pendingPulls = result.pendingPulls;
+            const latestTime = allRecords[0].time; // 截圖第一行的時間
+
             if (typeof window.autoFillFromOCR === 'function') {
-                window.autoFillFromOCR(firstGold.pulls, firstGold.name);
+                // 將所有關鍵數據傳遞給 app.js
+                window.autoFillFromOCR(targetGold.pulls, targetGold.name, latestTime, pendingPulls);
             }
 
             let resText = `✅ 辨識完成！\n\n`;
             [...result.pullEvents].reverse().forEach(evt => { resText += `${evt.name}：${evt.pulls} 抽\n`; });
+            if (pendingPulls > 0) resText += `\n💡 偵測到出金後已墊 ${pendingPulls} 抽`;
             if (warnings.length > 0) resText += `\n(⚠️ ${warnings.join('；')})`;
             statusEl.innerText = resText; statusEl.style.color = '#4ade80';
         } else {
@@ -68,16 +71,12 @@ async function extractRecordsFromImage(file) {
         let foundRow = rows.find(r => {
             const overlap = Math.max(0, Math.min(r.bbox.y1, line.bbox.y1) - Math.max(r.bbox.y0, line.bbox.y0));
             const minHeight = Math.min(r.bbox.y1 - r.bbox.y0, line.bbox.y1 - line.bbox.y0);
-            // 拔除絕對高度限制，純粹依賴重疊比例，防止縮小圖被強制黏合
             return overlap > minHeight * 0.3;
         });
         
         if (foundRow) {
-            if (line.bbox.x0 < foundRow.bbox.x0) {
-                foundRow.text = text + " " + foundRow.text;
-            } else {
-                foundRow.text = foundRow.text + " " + text;
-            }
+            if (line.bbox.x0 < foundRow.bbox.x0) { foundRow.text = text + " " + foundRow.text; } 
+            else { foundRow.text = foundRow.text + " " + text; }
             foundRow.bbox.x0 = Math.min(foundRow.bbox.x0, line.bbox.x0);
             foundRow.bbox.y0 = Math.min(foundRow.bbox.y0, line.bbox.y0);
             foundRow.bbox.x1 = Math.max(foundRow.bbox.x1, line.bbox.x1);
@@ -87,7 +86,6 @@ async function extractRecordsFromImage(file) {
             rows.push({ text: text, yCenter: yCenter, bbox: { ...line.bbox } });
         }
     }
-    
     rows.sort((a, b) => a.yCenter - b.yCenter);
     return parseOCRLines(rows, colorCanvas, cropTop);
 }
@@ -105,11 +103,8 @@ function detectStarFromColor(colorCanvas, bbox, cropTop) {
         else if (b > r && b > g && (b - r) > 25 && b > 120) pCount++;
     }
     const totalPixels = data.length / 4;
-    const gR = gCount / totalPixels;
-    const pR = pCount / totalPixels;
-    
-    if (gR > 0.003) return 5; 
-    if (pR > 0.003) return 4; 
+    if (gCount / totalPixels > 0.003) return 5; 
+    if (pCount / totalPixels > 0.003) return 4; 
     return 3;
 }
 
@@ -123,17 +118,13 @@ function parseOCRLines(rows, colorCanvas, cropTop) {
 
     for (const row of rows) {
         const rawText = row.text.trim();
-        // 寬鬆的第一層過濾，只擋掉明顯的介面標籤
         if (rawText.length < 4 || /DEEPSPACE|LIMITED|掉落|預覽|許願|記錄|伺服器|延遲|沒有資料|稍後|再來|UID|uid|類型|名稱|時間/i.test(rawText)) continue;
-        
         const textNoSpace = rawText.replace(/\s+/g, '');
         const cleanText = textNoSpace.replace(/[345]星/g, '').replace(/\[Mini\]/ig, '');
         
         const hasName = ['祁煜', '沈星回', '黎深', '秦徹', '夏以晝'].some(n => cleanText.includes(n));
         const hasStarStr = /[345]星/.test(textNoSpace);
         const hasDate = /202\d/.test(rawText) || /-\d{2}-\d{2}/.test(rawText);
-        
-        // 核心：只要有名字、有星級、或者有明顯日期特徵之一，就強制保留
         if (!hasName && !hasStarStr && !hasDate) continue;
 
         const star = detectStarFromColor(colorCanvas, row.bbox, cropTop) || (/(5|S|s|五|§)[星生皇里室量]/.test(textNoSpace) ? 5 : (/(4|A|a|四)[星生皇里室量]/.test(textNoSpace) ? 4 : 3));
@@ -160,21 +151,14 @@ function parseOCRLines(rows, colorCanvas, cropTop) {
             if (cardName === '未知' && foundLead && star === 5) cardName = `${foundLead} (未知卡名)`;
         }
 
-        // 支援缺漏年份的時間解析 (例如 OCR 漏看 2026)
         const tM = rawText.match(/(202\d)?[-/.]?\d{1,2}[-/.]\d{1,2}\s+\d{1,2}[:;.]\d{1,2}[:;.]\d{1,2}/);
-        let time = lastTime;
-        let hasRealTime = false;
-        
+        let time = lastTime; let hasRealTime = false;
         if (tM) { 
             let timeStr = tM[0];
-            if (!timeStr.startsWith('202')) {
-                timeStr = new Date().getFullYear() + '-' + timeStr.replace(/^[-/.]/, '');
-            }
-            const safeTimeStr = timeStr.replace(/[-/.]/g, '-').replace(/[:;.]/g, ':').replace(/\s+/, 'T');
-            const parsed = new Date(safeTimeStr).getTime(); 
+            if (!timeStr.startsWith('202')) timeStr = new Date().getFullYear() + '-' + timeStr.replace(/^[-/.]/, '');
+            const parsed = new Date(timeStr.replace(/[-/.]/g, '-').replace(/[:;.]/g, ':').replace(/\s+/, 'T')).getTime(); 
             if (!isNaN(parsed)) { time = parsed; lastTime = parsed; hasRealTime = true; } 
         }
-        
         records.push({ star, time, name: cardName, raw: rawText, _hasRealTime: hasRealTime });
     }
     return records;
@@ -191,6 +175,10 @@ function fileToCanvas(file) {
 
 function countPulls(records) {
     const pos = records.map((r, i) => ({ ...r, i })).filter(r => r.star === 5);
-    if (pos.length < 2) return { pullEvents: [], fiveStarCount: pos.length };
-    return { pullEvents: pos.slice(0, -1).map((c, i) => ({ name: c.name, pulls: pos[i+1].i - c.i })), fiveStarCount: pos.length };
+    const pendingPulls = pos.length > 0 ? pos[0].i : records.length; 
+    if (pos.length < 2) return { pullEvents: [], fiveStarCount: pos.length, pendingPulls, pos };
+    return { 
+        pullEvents: pos.slice(0, -1).map((c, i) => ({ name: c.name, pulls: pos[i+1].i - c.i })), 
+        fiveStarCount: pos.length, pendingPulls, pos 
+    };
 }
