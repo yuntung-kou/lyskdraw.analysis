@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════
-//  ocr_parser.js — 智慧行合併 + 精準抽數版 (v20)
+//  ocr_parser.js — 智慧行合併 + 特徵防丟失版 (v21)
 // ═══════════════════════════════════════════════════════════
 
 async function handleOCR(event) {
@@ -15,13 +15,18 @@ async function handleOCR(event) {
             statusEl.innerText = `⏳ 辨識中... (${i + 1}/${files.length})`;
             const records = await extractRecordsFromImage(files[i]);
             
-            // 如果單張讀取過少，給予提示 (正常一頁是 15 筆)
             if (records.length < 5) warnings.push(`第 ${i + 1} 張僅讀取到 ${records.length} 筆`);
-            if (records.length > 0) pages.push(records);
+            if (records.length > 0) {
+                // 為整個 page 找一個最具代表性的時間，避免頂部時間糊掉導致整頁順序錯亂
+                const validTimeRecord = records.find(r => r._hasRealTime);
+                records._pageTime = validTimeRecord ? validTimeRecord.time : 0;
+                pages.push(records);
+            }
         }
         if (pages.length === 0) { statusEl.innerText = '⚠️ 未能辨識，請確認截圖清晰'; statusEl.style.color = '#facc15'; return; }
 
-        pages.sort((a, b) => (b[0].time || 0) - (a[0].time || 0));
+        // 使用頁面內的有效時間來排序整個頁面
+        pages.sort((a, b) => b._pageTime - a._pageTime);
         const allRecords = pages.flat();
         const result = countPulls(allRecords);
 
@@ -54,28 +59,25 @@ async function extractRecordsFromImage(file) {
     ctx.drawImage(colorCanvas, 0, -cropTop);
     const result = await Tesseract.recognize(ocrCanvas, 'chi_tra+eng');
     
-    // 🌟 核心修復：將 OCR 切碎的文字，利用 Y 座標高度強制組裝回「完整的一行」
     const rows = [];
     for (const line of result.data.lines) {
         const text = line.text.trim();
-        if (text.length < 2) continue; // 忽略太短的雜訊
+        if (text.length < 2) continue;
         
         const yCenter = (line.bbox.y0 + line.bbox.y1) / 2;
-        // 尋找高度接近或有重疊的現有行
         let foundRow = rows.find(r => {
             const overlap = Math.max(0, Math.min(r.bbox.y1, line.bbox.y1) - Math.max(r.bbox.y0, line.bbox.y0));
             const minHeight = Math.min(r.bbox.y1 - r.bbox.y0, line.bbox.y1 - line.bbox.y0);
-            return (overlap > minHeight * 0.3) || (Math.abs(r.yCenter - yCenter) < 40);
+            // 拔除絕對高度限制，純粹依賴重疊比例，防止縮小圖被強制黏合
+            return overlap > minHeight * 0.3;
         });
         
         if (foundRow) {
-            // 根據 X 座標決定左右拼接順序，避免文字顛倒
             if (line.bbox.x0 < foundRow.bbox.x0) {
                 foundRow.text = text + " " + foundRow.text;
             } else {
                 foundRow.text = foundRow.text + " " + text;
             }
-            // 擴展這個合併行的邊界
             foundRow.bbox.x0 = Math.min(foundRow.bbox.x0, line.bbox.x0);
             foundRow.bbox.y0 = Math.min(foundRow.bbox.y0, line.bbox.y0);
             foundRow.bbox.x1 = Math.max(foundRow.bbox.x1, line.bbox.x1);
@@ -86,9 +88,7 @@ async function extractRecordsFromImage(file) {
         }
     }
     
-    // 依照高度從上往下排序
     rows.sort((a, b) => a.yCenter - b.yCenter);
-    
     return parseOCRLines(rows, colorCanvas, cropTop);
 }
 
@@ -108,7 +108,6 @@ function detectStarFromColor(colorCanvas, bbox, cropTop) {
     const gR = gCount / totalPixels;
     const pR = pCount / totalPixels;
     
-    // 因為合併後的判定框變寬了，微調比例閾值到 0.3%
     if (gR > 0.003) return 5; 
     if (pR > 0.003) return 4; 
     return 3;
@@ -124,19 +123,21 @@ function parseOCRLines(rows, colorCanvas, cropTop) {
 
     for (const row of rows) {
         const rawText = row.text.trim();
-        if (rawText.length < 5 || /DEEPSPACE|LIMITED|掉落|預覽|許願|記錄|伺服器|延遲|類型|名稱|時間|沒有資料|稍後|再來|UID|uid/.test(rawText)) continue;
+        // 寬鬆的第一層過濾，只擋掉明顯的介面標籤
+        if (rawText.length < 4 || /DEEPSPACE|LIMITED|掉落|預覽|許願|記錄|伺服器|延遲|沒有資料|稍後|再來|UID|uid|類型|名稱|時間/i.test(rawText)) continue;
         
-        // 🌟 雙重過濾：確保這行文字包含足量數字，且【必須包含年份特徵 202x】
-        const digitCount = (rawText.match(/\d/g) || []).length;
-        if (digitCount < 4 || !/202\d/.test(rawText)) continue;
-
         const textNoSpace = rawText.replace(/\s+/g, '');
         const cleanText = textNoSpace.replace(/[345]星/g, '').replace(/\[Mini\]/ig, '');
         
-        // 星級判定
+        const hasName = ['祁煜', '沈星回', '黎深', '秦徹', '夏以晝'].some(n => cleanText.includes(n));
+        const hasStarStr = /[345]星/.test(textNoSpace);
+        const hasDate = /202\d/.test(rawText) || /-\d{2}-\d{2}/.test(rawText);
+        
+        // 核心：只要有名字、有星級、或者有明顯日期特徵之一，就強制保留
+        if (!hasName && !hasStarStr && !hasDate) continue;
+
         const star = detectStarFromColor(colorCanvas, row.bbox, cropTop) || (/(5|S|s|五|§)[星生皇里室量]/.test(textNoSpace) ? 5 : (/(4|A|a|四)[星生皇里室量]/.test(textNoSpace) ? 4 : 3));
 
-        // 卡名判定
         let cardName = '未知';
         for (const k of known) { if (cleanText.includes(k.replace(/\s+/g, ''))) { cardName = k; break; } }
         
@@ -159,15 +160,22 @@ function parseOCRLines(rows, colorCanvas, cropTop) {
             if (cardName === '未知' && foundLead && star === 5) cardName = `${foundLead} (未知卡名)`;
         }
 
-        // 時間判定
-        const tM = rawText.match(/202\d[-/.]\d{1,2}[-/.]\d{1,2}\s+\d{1,2}[:;.]\d{1,2}[:;.]\d{1,2}/);
+        // 支援缺漏年份的時間解析 (例如 OCR 漏看 2026)
+        const tM = rawText.match(/(202\d)?[-/.]?\d{1,2}[-/.]\d{1,2}\s+\d{1,2}[:;.]\d{1,2}[:;.]\d{1,2}/);
         let time = lastTime;
+        let hasRealTime = false;
+        
         if (tM) { 
-            const parsed = new Date(tM[0].replace(/[-/.]/g, '-').replace(/[:;.]/g, ':').replace(/\s+/, 'T')).getTime(); 
-            if (!isNaN(parsed)) { time = parsed; lastTime = parsed; } 
+            let timeStr = tM[0];
+            if (!timeStr.startsWith('202')) {
+                timeStr = new Date().getFullYear() + '-' + timeStr.replace(/^[-/.]/, '');
+            }
+            const safeTimeStr = timeStr.replace(/[-/.]/g, '-').replace(/[:;.]/g, ':').replace(/\s+/, 'T');
+            const parsed = new Date(safeTimeStr).getTime(); 
+            if (!isNaN(parsed)) { time = parsed; lastTime = parsed; hasRealTime = true; } 
         }
         
-        records.push({ star, time, name: cardName });
+        records.push({ star, time, name: cardName, raw: rawText, _hasRealTime: hasRealTime });
     }
     return records;
 }
