@@ -111,7 +111,7 @@ function renderDropdown(inputId) {
 }
 
 function filterDropdown(inputId) { renderDropdown(inputId); }
-function showDropdown(inputId) { filterDropdown(inputId); }
+function showDropdown(inputId)  { renderDropdown(inputId); }
 function hideDropdownDelayed(inputId) { setTimeout(() => { const w = document.getElementById(inputId + 'ListWrapper'); if (w) w.style.display = 'none'; }, 150); }
 
 function findEvent(eventName, mainPool) {
@@ -267,7 +267,7 @@ function addRecord() {
 }
 
 function deleteRec(id) { if (confirm('確定刪除此筆紀錄？')) { setDB(getDB().filter(r => r.id !== id)); renderUI(); } }
-function clearAll() { if (confirm('確定清空所有資料？')) { localStorage.removeItem('db_v4'); _setP('lim', 0); _setP('re', 0); renderUI(); } }
+function clearAll() { if (confirm('確定清空所有資料？')) { localStorage.removeItem('db_v4'); _setP('lim', 0); _setP('re', 0); window.currentPendingPulls = 0; renderUI(); } }
 
 function updateLuckStats() {
     const db = getDB();
@@ -332,7 +332,7 @@ function renderUI() {
         }
         const d = new Date(r._evTime || r.id);
         const dateStr = r._evTime ? `[${d.getFullYear().toString().slice(2)}/${(d.getMonth()+1).toString().padStart(2,'0')}]` : '[未知]';
-        const isBlack = (r.luck.s <= 0 && r.pulls < 62) || (r.luck.s === 1 && r.pulls >= 55 && r.pulls <= 62);
+        const isBlack = r.pulls > 55 && r.pulls <= 62 && r.luck.s <= 1;
 
         return `
         <div class="h-record-card">
@@ -344,7 +344,7 @@ function renderUI() {
                 </div>
                 <div class="h-right">
                     <div class="h-pulls"><span class="pull-num">${r.pulls}</span> 抽</div>
-                    <div class="h-luck ${r.pulls > 55 ? 'luck-high' : 'luck-low'} ${isBlack ? 'luck-black-light' : ''}" style="${r.pulls <= 55 ? 'background-color:' + r.luck.c + 'BF;color:#fff;' : ''}">${r.luck.t}</div>
+                    <div class="h-luck ${r.pulls > 55 ? 'luck-high' : ''} ${isBlack ? 'luck-black-light' : ''}" style="${r.pulls <= 55 ? 'background-color:' + r.luck.c + 'BF;color:#fff;' : ''}">${r.luck.t}</div>
                     <button class="del-btn-icon" onclick="deleteRec(${r.id})">🗑️</button>
                 </div>
             </div>
