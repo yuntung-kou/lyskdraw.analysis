@@ -131,10 +131,10 @@ function parseOCRLines(rows, colorCanvas, cropTop) {
         for (const k of known) { if (cleanText.includes(k.replace(/\s+/g, ''))) { cardName = k; break; } }
         
         if (cardName === '未知') {
-            let maxS = 0; const vars = { '溫': '温', '繾': '缱', '綣': '绻', '晝': '昼', '跡': '迹', '戀': '恋' };
+            let maxS = 0;
             for (const k of known) {
                 const kChars = k.replace(/\s+/g, '').split('');
-                let s = 0; kChars.forEach(c => { if (cleanText.includes(c) || (vars[c] && cleanText.includes(vars[c]))) s++; });
+                let s = 0; kChars.forEach(c => { if (cleanText.includes(c) || (VARIANT_CHARS[c] && cleanText.includes(VARIANT_CHARS[c]))) s++; });
                 if (s / kChars.length >= 0.5 && s > maxS) { maxS = s; cardName = k; }
             }
         }
@@ -161,6 +161,9 @@ function parseOCRLines(rows, colorCanvas, cropTop) {
     }
     return records;
 }
+
+// 繁簡異體字對照（用於卡名模糊比對）
+const VARIANT_CHARS = { '溫': '温', '繾': '缱', '綣': '绻', '晝': '昼', '跡': '迹', '戀': '恋' };
 
 // 🌟 被我誤刪的關鍵函數補回來了！
 function fileToCanvas(file) {
