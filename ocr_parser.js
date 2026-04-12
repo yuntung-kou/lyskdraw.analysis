@@ -145,7 +145,7 @@ function detectStarFromColor(colorCanvas, bbox, cropTop) {
 
 
 // ═══════════════════════════════════════════════════════════
-// 📄 解析每一行 OCR 結果
+// 📄 解析每一行 OCR 結果 (v18 修復卡名未知 Bug)
 // ═══════════════════════════════════════════════════════════
 function parseOCRLines(lines, colorCanvas, cropTop) {
   const records = [];
@@ -159,7 +159,6 @@ function parseOCRLines(lines, colorCanvas, cropTop) {
   }
   allKnownCards = [...new Set(allKnownCards)];
 
-  // ★ 修正 Bug 1：備用時間改回 Date.now()，不再用 0
   let lastValidTime = Date.now();
 
   for (const line of lines) {
@@ -171,24 +170,35 @@ function parseOCRLines(lines, colorCanvas, cropTop) {
     const digits = text.match(/\d/g);
     if (!digits || digits.length < 4) continue;
 
+    // 🌟 關鍵修正：對抗 OCR 的「隱形空白」
+    // 建立一個完全沒有空白的字串，專門用來找卡名
+    const textNoSpace = text.replace(/\s+/g, '');
+
     // ★ 顏色偵測優先，失敗則降級為文字判斷
     let star;
     const colorResult = detectStarFromColor(colorCanvas, line.bbox, cropTop);
     if (colorResult !== null) {
       star = colorResult;
     } else {
-      if (/(5|S|s|五|§)\s*[星生皇里室量]/.test(text)) star = 5;
-      else if (/(4|A|a|四)\s*[星生皇里室量]/.test(text)) star = 4;
+      // 這裡也用去空白的字串來防禦 "5 星" 被切開的問題
+      if (/(5|S|s|五|§)[星生皇里室量]/.test(textNoSpace)) star = 5;
+      else if (/(4|A|a|四)[星生皇里室量]/.test(textNoSpace)) star = 4;
       else star = 3;
     }
 
-    // 卡名：字典優先
+    // 卡名：拿「沒有空白」的版本去跟字典對答案
     let cardName = '未知';
     for (const known of allKnownCards) {
-      if (text.includes(known)) { cardName = known; break; }
+      // 字典裡的名字也確保沒有空白，做到 100% 精準對齊
+      if (textNoSpace.includes(known.replace(/\s+/g, ''))) { 
+        cardName = known; 
+        break; 
+      }
     }
+    
+    // 如果字典還是找不到（可能是新卡），用正則表達式從無空白字串抓連續中文
     if (cardName === '未知') {
-      const matches = text.match(/[\u4e00-\u9fa5·・]{2,}/g);
+      const matches = textNoSpace.match(/[\u4e00-\u9fa5·・]{2,}/g);
       if (matches) {
         const filtered = matches.filter(m => !/^[星類型名稱時間掉落預覽]+$/.test(m));
         if (filtered.length > 0) {
@@ -197,11 +207,11 @@ function parseOCRLines(lines, colorCanvas, cropTop) {
       }
     }
 
-    // 時間解析
+    // 時間解析 (這裡必須用原本的 text，因為正則需要認空白和冒號)
     const timeMatch = text.match(
       /202\d[-/.]\d{1,2}[-/.]\d{1,2}\s+\d{1,2}[:;.]\d{1,2}[:;.]\d{1,2}/
     );
-    let time = lastValidTime; // ★ 修正 Bug 1：沒解析到時間就用上一筆的，不跳過整行
+    let time = lastValidTime; 
     if (timeMatch) {
       const cleaned = timeMatch[0]
         .replace(/[-/.]/g, '-')
