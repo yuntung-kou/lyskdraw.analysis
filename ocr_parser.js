@@ -145,7 +145,7 @@ function detectStarFromColor(colorCanvas, bbox, cropTop) {
 
 
 // ═══════════════════════════════════════════════════════════
-// 📄 解析每一行 OCR 結果 (v18 修復卡名未知 Bug)
+// 📄 解析每一行 OCR 結果 (v19 終極卡名校正版)
 // ═══════════════════════════════════════════════════════════
 function parseOCRLines(lines, colorCanvas, cropTop) {
   const records = [];
@@ -170,48 +170,85 @@ function parseOCRLines(lines, colorCanvas, cropTop) {
     const digits = text.match(/\d/g);
     if (!digits || digits.length < 4) continue;
 
-    // 🌟 關鍵修正：對抗 OCR 的「隱形空白」
-    // 建立一個完全沒有空白的字串，專門用來找卡名
+    // 🌟 1. 基礎去空白
     const textNoSpace = text.replace(/\s+/g, '');
+    // 🌟 2. 拔除干擾字眼 (把黏在一起的 "5星", "4星" 拔掉，避免被當成名字的一部分)
+    const cleanText = textNoSpace.replace(/[345]星/g, '').replace(/\[Mini\]/ig, '');
 
-    // ★ 顏色偵測優先，失敗則降級為文字判斷
     let star;
     const colorResult = detectStarFromColor(colorCanvas, line.bbox, cropTop);
     if (colorResult !== null) {
       star = colorResult;
     } else {
-      // 這裡也用去空白的字串來防禦 "5 星" 被切開的問題
       if (/(5|S|s|五|§)[星生皇里室量]/.test(textNoSpace)) star = 5;
       else if (/(4|A|a|四)[星生皇里室量]/.test(textNoSpace)) star = 4;
       else star = 3;
     }
 
-    // 卡名：拿「沒有空白」的版本去跟字典對答案
     let cardName = '未知';
+
+    // 🌟 3. 精確比對 (去除空白對齊)
     for (const known of allKnownCards) {
-      // 字典裡的名字也確保沒有空白，做到 100% 精準對齊
-      if (textNoSpace.includes(known.replace(/\s+/g, ''))) { 
-        cardName = known; 
-        break; 
+      if (cleanText.includes(known.replace(/\s+/g, ''))) {
+        cardName = known;
+        break;
       }
     }
-    
-    // 如果字典還是找不到（可能是新卡），用正則表達式從無空白字串抓連續中文
+
+    // 🌟 4. 模糊比對 (Fuzzy Match)：專治 OCR 錯字
     if (cardName === '未知') {
-      const matches = textNoSpace.match(/[\u4e00-\u9fa5·・]{2,}/g);
+      let maxScore = 0;
+      let bestMatch = '未知';
+      // 內建深空常見 OCR 錯字轉換表 (繁簡互通)
+      const variants = { '溫': '温', '繾': '缱', '綣': '绻', '晝': '昼', '跡': '迹', '戀': '恋' };
+
+      for (const known of allKnownCards) {
+        const knownChars = known.replace(/\s+/g, '').split('');
+        let score = 0;
+        for (const char of knownChars) {
+          if (cleanText.includes(char)) {
+            score++;
+          } else if (variants[char] && cleanText.includes(variants[char])) {
+            score++; // 即使讀成錯字(如 温)也算得分
+          }
+        }
+        // 只要對中 50% 以上的字元，且分數最高，就認定是它
+        const matchRate = score / knownChars.length;
+        if (matchRate >= 0.5 && score > maxScore) {
+          maxScore = score;
+          bestMatch = known;
+        }
+      }
+      if (bestMatch !== '未知') cardName = bestMatch;
+    }
+
+    // 🌟 5. 終極保底 (真的爛到認不出卡名，但認得出男主的處理)
+    if (cardName === '未知') {
+      const leads = ['祁煜', '沈星回', '黎深', '秦徹', '夏以晝'];
+      let foundLead = leads.find(l => cleanText.includes(l));
+      
+      const matches = cleanText.match(/[\u4e00-\u9fa5]{2,}/g);
       if (matches) {
-        const filtered = matches.filter(m => !/^[星類型名稱時間掉落預覽]+$/.test(m));
+        // 把男主名字剃除，剩下的中文字拿來當卡名 (避免抓到 星沈星回)
+        const filtered = matches
+          .map(m => m.replace(/祁煜|沈星回|黎深|秦徹|夏以晝/g, ''))
+          .filter(m => m.length >= 2 && !/^[星類型名稱時間掉落預覽]+$/.test(m));
         if (filtered.length > 0) {
           cardName = filtered.reduce((a, b) => a.length >= b.length ? a : b);
         }
       }
+      
+      // 如果過濾完還是空的 (代表名字全變成亂碼)，但有男主名且是5星
+      if ((cardName === '未知' || cardName.trim() === '') && foundLead && star === 5) {
+         cardName = `${foundLead} (未知卡名)`;
+      }
     }
 
-    // 時間解析 (這裡必須用原本的 text，因為正則需要認空白和冒號)
+    // 時間解析
     const timeMatch = text.match(
       /202\d[-/.]\d{1,2}[-/.]\d{1,2}\s+\d{1,2}[:;.]\d{1,2}[:;.]\d{1,2}/
     );
-    let time = lastValidTime; 
+    let time = lastValidTime;
     if (timeMatch) {
       const cleaned = timeMatch[0]
         .replace(/[-/.]/g, '-')
@@ -226,7 +263,6 @@ function parseOCRLines(lines, colorCanvas, cropTop) {
 
   return records;
 }
-
 
 // ═══════════════════════════════════════════════════════════
 // 🖼️ File → Canvas
