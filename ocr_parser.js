@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════
-//  ocr_parser.js — 智慧行合併 + 特徵防丟失版 (v22 - 參數傳遞修復)
+//  ocr_parser.js — 智慧行合併 + 特徵防丟失版 (v23 - 修正多金帶入順序)
 // ═══════════════════════════════════════════════════════════
 
 async function handleOCR(event) {
@@ -29,17 +29,17 @@ async function handleOCR(event) {
         const result = countPulls(allRecords);
 
         if (result.pullEvents.length > 0) {
-            // 💡 取得最新的一次五星紀錄與墊抽數
-            const targetGold = result.pullEvents[0]; 
+            // 💡 關鍵修改：取得「最先抽到」的那張五星 (陣列的最後一項) 作為表單自動填寫的目標
+            const targetGold = result.pullEvents[result.pullEvents.length - 1]; 
             const pendingPulls = result.pendingPulls;
-            const latestTime = allRecords[0].time; // 截圖第一行的時間
 
             if (typeof window.autoFillFromOCR === 'function') {
-                // 將所有關鍵數據傳遞給 app.js
-                window.autoFillFromOCR(targetGold.pulls, targetGold.name, latestTime, pendingPulls);
+                // 將 目標抽數、目標卡名、目標卡片的時間、目前的墊抽數 傳給 app.js
+                window.autoFillFromOCR(targetGold.pulls, targetGold.name, targetGold.time, pendingPulls);
             }
 
             let resText = `✅ 辨識完成！\n\n`;
+            // 呈現區維持不變，依然會把所有五星都列出來
             [...result.pullEvents].reverse().forEach(evt => { resText += `${evt.name}：${evt.pulls} 抽\n`; });
             if (pendingPulls > 0) resText += `\n💡 偵測到出金後已墊 ${pendingPulls} 抽`;
             if (warnings.length > 0) resText += `\n(⚠️ ${warnings.join('；')})`;
@@ -164,21 +164,13 @@ function parseOCRLines(rows, colorCanvas, cropTop) {
     return records;
 }
 
-function fileToCanvas(file) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => { const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; c.getContext('2d').drawImage(img, 0, 0); resolve(c); };
-        img.onerror = () => reject(new Error('失敗'));
-        img.src = URL.createObjectURL(file);
-    });
-}
-
 function countPulls(records) {
     const pos = records.map((r, i) => ({ ...r, i })).filter(r => r.star === 5);
     const pendingPulls = pos.length > 0 ? pos[0].i : records.length; 
     if (pos.length < 2) return { pullEvents: [], fiveStarCount: pos.length, pendingPulls, pos };
     return { 
-        pullEvents: pos.slice(0, -1).map((c, i) => ({ name: c.name, pulls: pos[i+1].i - c.i })), 
+        // 💡 關鍵修改：將 time 也一併記錄下來，供 app.js 進行精準的時間推演
+        pullEvents: pos.slice(0, -1).map((c, i) => ({ name: c.name, pulls: pos[i+1].i - c.i, time: c.time })), 
         fiveStarCount: pos.length, pendingPulls, pos 
     };
 }
