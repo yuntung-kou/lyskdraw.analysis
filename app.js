@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════
-//  app.js — 戀與深空抽卡分析器 (全自動偵測保底版)
+//  app.js — 戀與深空抽卡分析器 (全自動偵測保底版 + 數據統計與精確體質)
 // ════════════════════════════════════════════════════════════
 
 const leadIcons = { '祁煜': '🐟', '沈星回': '🌟', '黎深': '🍐', '秦徹': '🚘', '夏以晝': '🍎' };
@@ -271,15 +271,67 @@ function clearAll() { if (confirm('確定清空所有資料？')) { localStorage
 
 function updateLuckStats() {
     const db = getDB();
+    
+    // --- 1. 計算基本統計數據 ---
+    const totalPulls = db.reduce((sum, r) => sum + r.pulls, 0);
+    document.getElementById('statTotalPulls').innerText = totalPulls;
+
+    // 計算平均出五星
+    const avgFiveStar = db.length > 0 ? (totalPulls / db.length).toFixed(1) : '0.0';
+    document.getElementById('statAvgFiveStar').innerText = avgFiveStar;
+
+    // 計算平均出限定（僅計算 res === 'target' 的紀錄，其 total 欄位即為該次出限定所花費的總抽數）
+    const targetsOnly = db.filter(r => r.res === 'target');
+    const avgLimited = targetsOnly.length > 0 ? (targetsOnly.reduce((sum, r) => sum + r.total, 0) / targetsOnly.length).toFixed(1) : '0.0';
+    document.getElementById('statAvgLimited').innerText = avgLimited;
+
+    // --- 2. 體質鑑定與精確幸運度百分比 ---
     const mainF = document.getElementById('mainPoolLuckSelect').value;
     const subF = document.getElementById('subPoolLuckSelect').value;
-    const calc = (items) => {
-        if (!items.length) return '---';
-        const avg = items.reduce((a, b) => a + b.luck.s, 0) / items.length;
-        return avg >= 1.5 ? '<span class="title-god">✨ 天選之子</span>' : avg >= 0.5 ? '<span class="title-lucky">🌟 幸運兒</span>' : avg >= -0.5 ? '<span class="title-plain">😐 平凡人</span>' : avg >= -1.5 ? '<span class="title-unlucky">🌧️ 小不幸運</span>' : '<span class="title-bad">🌩️ 小倒霉鬼</span>';
+    
+    // 超級輕量化的查表函數 (仰賴 luck_data.js 中的 beatPercentTable)
+    const calcPercentile = (avgPulls) => {
+        if (!avgPulls || avgPulls <= 0) return '';
+        
+        // 將平均抽數限制在 1~140 之間的整數
+        let pullCount = Math.max(1, Math.min(140, Math.round(parseFloat(avgPulls))));
+        
+        // 確保 beatPercentTable 存在 (防止 luck_data.js 載入失敗報錯)
+        if (typeof beatPercentTable === 'undefined') return '';
+        
+        // 直接從陣列讀取預先算好的 % 數
+        let beatPercent = beatPercentTable[pullCount];
+        
+        return `幸運度超過了約 ${beatPercent}% 的玩家`;
     };
-    document.getElementById('luckMainVal').innerHTML = calc(db.filter(r => r.res === 'target' && (mainF === '綜合' || r.main === mainF)));
-    document.getElementById('luckSubVal').innerHTML = calc(db.filter(r => r.res === 'target' && r.sub === subF));
+
+    const getStats = (items) => {
+        if (!items.length) return { text: '---', percentile: '' };
+        // 平均分數用於決定稱號
+        const avgScore = items.reduce((a, b) => a + b.luck.s, 0) / items.length;
+        // 平均出限定抽數用於計算 % 數
+        const avgLimitedPulls = items.reduce((a, b) => a + b.total, 0) / items.length;
+        
+        let text = '';
+        if (avgScore >= 1.5) text = '<span class="title-god">✨ 天選之子</span>';
+        else if (avgScore >= 0.5) text = '<span class="title-lucky">🌟 幸運兒</span>';
+        else if (avgScore >= -0.5) text = '<span class="title-plain">😐 平凡人</span>';
+        else if (avgScore >= -1.5) text = '<span class="title-unlucky">🌧️ 小不幸運</span>';
+        else text = '<span class="title-bad">🌩️ 小倒霉鬼</span>';
+
+        return { text, percentile: calcPercentile(avgLimitedPulls) };
+    };
+
+    const mainItems = db.filter(r => r.res === 'target' && (mainF === '綜合' || r.main === mainF));
+    const subItems = db.filter(r => r.res === 'target' && r.sub === subF);
+
+    const mainRes = getStats(mainItems);
+    document.getElementById('luckMainVal').innerHTML = mainRes.text;
+    document.getElementById('luckMainPercentile').innerHTML = mainRes.percentile;
+
+    const subRes = getStats(subItems);
+    document.getElementById('luckSubVal').innerHTML = subRes.text;
+    document.getElementById('luckSubPercentile').innerHTML = subRes.percentile;
 }
 
 function getEventDate(eventName, mainPool) {
