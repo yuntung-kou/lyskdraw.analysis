@@ -4,16 +4,21 @@
 
 const leadIcons = { '祁煜': '🐟', '沈星回': '🌟', '黎深': '🍐', '秦徹': '🚘', '夏以晝': '🍎' };
 
-window.currentPendingPulls = 0; 
+window.currentPendingPulls = 0;
 
-const getDB  = () => JSON.parse(localStorage.getItem('db_v4')) || [];
-const setDB  = (db) => localStorage.setItem('db_v4', JSON.stringify(db));
-const getP   = (type) => parseInt(localStorage.getItem('p_' + type)) || 0;
-const _setP  = (type, v) => localStorage.setItem('p_' + type, v);
-const setP   = (type, v) => { _setP(type, v); renderUI(); };
+// [FIX #6] setDB 在序列化前過濾衍生欄位，避免 _evTime / _sortTime / _entryOrder / luck 膨脹 localStorage
+const getDB = () => JSON.parse(localStorage.getItem('db_v4')) || [];
+const setDB = (db) => {
+    const toSave = db.map(({ _evTime, _sortTime, _entryOrder, luck, ...rest }) => rest);
+    localStorage.setItem('db_v4', JSON.stringify(toSave));
+};
+const getP  = (type) => parseInt(localStorage.getItem('p_' + type)) || 0;
+const _setP = (type, v) => localStorage.setItem('p_' + type, v);
+const setP  = (type, v) => { _setP(type, v); renderUI(); };
 
+// ── 主題 ──────────────────────────────────────────────────
 function initTheme() {
-    let saved = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const saved = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     document.documentElement.dataset.theme = saved;
     document.getElementById('themeBtn').textContent = saved === 'dark' ? '☀️' : '🌙';
 }
@@ -25,6 +30,7 @@ function toggleTheme() {
     document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
 }
 
+// ── 主推設定 ──────────────────────────────────────────────
 function toggleOshiEdit() {
     const group = document.getElementById('oshiGroup');
     const btn   = document.getElementById('oshiToggleBtn');
@@ -35,8 +41,9 @@ function toggleOshiEdit() {
 
 function updateOshiSummary() {
     const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
-    const summary = document.getElementById('oshiSummary');
-    summary.innerHTML = oshis.length > 0 ? `💖 主推守護中：${oshis.map(name => leadIcons[name] || '').join('')}` : `💖 尚未設定主推`;
+    document.getElementById('oshiSummary').innerHTML = oshis.length > 0
+        ? `💖 主推守護中：${oshis.map(name => leadIcons[name] || '').join('')}`
+        : `💖 尚未設定主推`;
 }
 
 function saveOshis() {
@@ -52,11 +59,12 @@ function loadOshis() {
     updateOshiSummary();
 }
 
+// ── 活動資料解析 ───────────────────────────────────────────
 function parseEventTime(e) {
     try {
         const startStr = e.duration.split('-')[0];
         const [m, d] = startStr.split('.');
-        return new Date(`${e.year}-${m.padStart(2,'0')}-${d.padStart(2,'0')}T00:00:00`).getTime();
+        return new Date(`${e.year}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T00:00:00`).getTime();
     } catch (err) { return 0; }
 }
 
@@ -65,7 +73,7 @@ function updateBannerRecommendations() {
     const mainPool = document.querySelector('input[name="mainPool"]:checked').value;
     const subPool  = document.querySelector('input[name="subPool"]:checked').value;
 
-    let filteredEvents = eventCards.filter(e => {
+    const filteredEvents = eventCards.filter(e => {
         const isRerun = e.poolType.includes('復刻');
         if (mainPool === '限定' && isRerun) return false;
         if (mainPool === '復刻' && !isRerun) return false;
@@ -84,7 +92,9 @@ function onPoolChange() {
     updatePulledCardList();
 }
 
+// ── 下拉選單 ───────────────────────────────────────────────
 let dropdownData = { bannerName: [], upCardName: [], cardName: [] };
+
 function renderDropdown(inputId) {
     const wrapper = document.getElementById(inputId + 'ListWrapper');
     const input   = document.getElementById(inputId);
@@ -109,42 +119,72 @@ function renderDropdown(inputId) {
     wrapper.style.display = count > 0 ? 'block' : 'none';
 }
 
-function filterDropdown(inputId) { renderDropdown(inputId); }
-function showDropdown(inputId)  { renderDropdown(inputId); }
-function hideDropdownDelayed(inputId) { setTimeout(() => { const w = document.getElementById(inputId + 'ListWrapper'); if (w) w.style.display = 'none'; }, 150); }
+// [FIX #7] filterDropdown 與 showDropdown 完全相同，統一為 renderDropdown 的別名
+const filterDropdown = renderDropdown;
+const showDropdown   = renderDropdown;
 
+function hideDropdownDelayed(inputId) {
+    setTimeout(() => {
+        const w = document.getElementById(inputId + 'ListWrapper');
+        if (w) w.style.display = 'none';
+    }, 150);
+}
+
+// ── 活動查詢 Helper ────────────────────────────────────────
 function findEvent(eventName, mainPool) {
     if (typeof eventCards === 'undefined') return null;
     const matches = eventCards.filter(e => e.eventName === eventName);
     return matches.find(e => mainPool === '復刻' ? e.poolType.includes('復刻') : !e.poolType.includes('復刻')) || matches[0];
 }
 
-window.autoFillFromUpCard = function() {
+// [NEW] 提取為獨立 helper：依卡名反查持有角色（standardCards 優先，再搜全部 eventCards）
+// 避免 autoFillFromOCR 與 renderUI 分別重複撰寫相同的搜尋邏輯
+function findTrueLead(cardName) {
+    if (typeof standardCards !== 'undefined') {
+        for (const lead in standardCards) {
+            if (standardCards[lead].includes(cardName)) return lead;
+        }
+    }
+    if (typeof eventCards !== 'undefined') {
+        for (const event of eventCards) {
+            for (const lead in event.cards) {
+                if (event.cards[lead]?.includes(cardName)) return lead;
+            }
+        }
+    }
+    return null;
+}
+
+// ── 自動填入 ───────────────────────────────────────────────
+window.autoFillFromUpCard = function () {
     const upCardName = document.getElementById('upCardName').value;
     if (!upCardName || typeof eventCards === 'undefined') return;
     const currentMainPool = document.querySelector('input[name="mainPool"]:checked').value;
     const matchingEvents = eventCards.filter(e => Object.values(e.cards).some(cards => cards.includes(upCardName)));
     if (matchingEvents.length > 0) {
-        let best = matchingEvents.find(e => (currentMainPool === '復刻' && e.poolType.includes('復刻')) || (currentMainPool === '限定' && !e.poolType.includes('復刻'))) || matchingEvents[0];
+        const best = matchingEvents.find(e =>
+            (currentMainPool === '復刻' && e.poolType.includes('復刻')) ||
+            (currentMainPool === '限定' && !e.poolType.includes('復刻'))
+        ) || matchingEvents[0];
         document.getElementById('bannerName').value = best.eventName;
         window.autoFillBannerInfo(best);
     }
 };
 
-window.autoFillBannerInfo = function(forcedEvent = null) {
+window.autoFillBannerInfo = function (forcedEvent = null) {
     const bannerName = document.getElementById('bannerName').value;
-    let event = forcedEvent || findEvent(bannerName, document.querySelector('input[name="mainPool"]:checked').value);
+    const event = forcedEvent || findEvent(bannerName, document.querySelector('input[name="mainPool"]:checked').value);
     if (event) {
         const isRerun = event.poolType.includes('復刻');
         document.querySelector(`input[name="mainPool"][value="${isRerun ? '復刻' : '限定'}"]`).checked = true;
-        if (event.poolType.includes('混池')) document.querySelector('input[name="subPool"][value="混池"]').checked = true;
+        if (event.poolType.includes('混池'))      document.querySelector('input[name="subPool"][value="混池"]').checked = true;
         else if (event.poolType.includes('日卡')) document.querySelector('input[name="subPool"][value="日卡"]').checked = true;
-        else document.querySelector('input[name="subPool"][value="單人"]').checked = true;
+        else                                      document.querySelector('input[name="subPool"][value="單人"]').checked = true;
     }
     onPoolChange();
 };
 
-window.updatePulledCardList = function() {
+window.updatePulledCardList = function () {
     const bannerName = document.getElementById('bannerName').value;
     const pulledLead = document.querySelector('input[name="pulledLead"]:checked').value;
     let options = [];
@@ -156,19 +196,18 @@ window.updatePulledCardList = function() {
     dropdownData.cardName = [...new Set(options)];
 };
 
-window.autoFillFromOCR = function(pulls, cardName, latestTime, pendingPulls) {
+window.autoFillFromOCR = function (pulls, cardName, latestTime, pendingPulls) {
     window.currentPendingPulls = pendingPulls || 0;
     document.getElementById('pulls').value = pulls;
     if (!cardName || cardName === '未知' || cardName.includes('未知卡名')) return;
     document.getElementById('cardName').value = cardName;
 
-    let foundLead = null;
-    let isStandard = false;
-    for (const lead in standardCards) { if (standardCards[lead].includes(cardName)) { foundLead = lead; isStandard = true; break; } }
+    // [FIX] 使用 findTrueLead helper 取代原本重複的雙層搜尋邏輯
+    let foundLead = findTrueLead(cardName);
 
     let matchedEvent = null;
     if (typeof eventCards !== 'undefined') {
-        let possibleEvents = eventCards.filter(ev => Object.values(ev.cards).some(c => c.includes(cardName)));
+        const possibleEvents = eventCards.filter(ev => Object.values(ev.cards).some(c => c.includes(cardName)));
         if (possibleEvents.length > 0) {
             const year = latestTime ? new Date(latestTime).getFullYear().toString() : null;
             matchedEvent = possibleEvents.find(ev => ev.year === year) || possibleEvents[0];
@@ -180,189 +219,221 @@ window.autoFillFromOCR = function(pulls, cardName, latestTime, pendingPulls) {
     if (matchedEvent) {
         const isRerun = matchedEvent.poolType.includes('復刻');
         document.querySelector(`input[name="mainPool"][value="${isRerun ? '復刻' : '限定'}"]`).checked = true;
-        if (matchedEvent.poolType.includes('混池')) document.querySelector('input[name="subPool"][value="混池"]').checked = true;
+        if (matchedEvent.poolType.includes('混池'))      document.querySelector('input[name="subPool"][value="混池"]').checked = true;
         else if (matchedEvent.poolType.includes('日卡')) document.querySelector('input[name="subPool"][value="日卡"]').checked = true;
-        else document.querySelector('input[name="subPool"][value="單人"]').checked = true;
+        else                                             document.querySelector('input[name="subPool"][value="單人"]').checked = true;
         document.getElementById('bannerName').value = matchedEvent.eventName;
     }
 
+    // 若 findTrueLead 未能從全域資料找到 lead，再嘗試從配對活動卡表中反查
     if (!foundLead && matchedEvent) {
-        for (const lead in matchedEvent.cards) { if (matchedEvent.cards[lead].includes(cardName)) { foundLead = lead; break; } }
+        for (const lead in matchedEvent.cards) {
+            if (matchedEvent.cards[lead].includes(cardName)) { foundLead = lead; break; }
+        }
     }
     if (foundLead) {
         const radio = document.querySelector(`input[name="pulledLead"][value="${foundLead}"]`);
         if (radio) radio.checked = true;
     }
 
-    const poolKey = (matchedEvent?.poolType.includes('復刻')) ? 're' : 'lim';
-    let isUpCard = false;
-    if (matchedEvent && foundLead) isUpCard = matchedEvent.cards[foundLead]?.includes(cardName);
-    
+    const poolKey = matchedEvent?.poolType.includes('復刻') ? 're' : 'lim';
+    const isUpCard = !!(matchedEvent && foundLead && matchedEvent.cards[foundLead]?.includes(cardName));
     const progress = isUpCard ? window.currentPendingPulls : (70 + window.currentPendingPulls);
     setP(poolKey, progress);
 
+    // [FIX #8] 移除多餘的 updatePulledCardList() 呼叫——onPoolChange() 內已包含
     onPoolChange();
-    updatePulledCardList();
 };
 
-const judgeS = (p) => p <= 16 ? { t: '天選之子 ✨', c: '#16a34a', s: 2 } : p <= 40 ? { t: '幸運兒 🌟', c: '#4ade80', s: 1 } : p <= 61 ? { t: '平凡人 😐', c: '#facc15', s: 0 } : p <= 62 ? { t: '小不幸運 🌧️', c: '#fb923c', s: -1 } : { t: '小倒霉鬼 🌩️', c: '#dc2626', s: -2 };
-const judgeT = (p) => p <= 30 ? { t: '天選之子 ✨', c: '#16a34a', s: 2 } : p <= 61 ? { t: '幸運兒 🌟', c: '#4ade80', s: 1 } : p <= 65 ? { t: '平凡人 😐', c: '#facc15', s: 0 } : p <= 68 ? { t: '小不幸運 🌧️', c: '#fb923c', s: -1 } : { t: '小倒霉鬼 🌩️', c: '#dc2626', s: -2 };
+// ── 幸運判定 ───────────────────────────────────────────────
+// [FIX #1] 修正 judgeS「小不幸運」範圍：原 p <= 62（只含 p === 62）→ 改為 p <= 65，使範圍合理
+const judgeS = (p) =>
+    p <= 16 ? { t: '天選之子 ✨', c: '#16a34a', s:  2 } :
+    p <= 40 ? { t: '幸運兒 🌟',  c: '#4ade80', s:  1 } :
+    p <= 61 ? { t: '平凡人 😐',  c: '#facc15', s:  0 } :
+    p <= 65 ? { t: '小不幸運 🌧️', c: '#fb923c', s: -1 } :
+              { t: '小倒霉鬼 🌩️', c: '#dc2626', s: -2 };
 
+const judgeT = (p) =>
+    p <= 30 ? { t: '天選之子 ✨', c: '#16a34a', s:  2 } :
+    p <= 61 ? { t: '幸運兒 🌟',  c: '#4ade80', s:  1 } :
+    p <= 65 ? { t: '平凡人 😐',  c: '#facc15', s:  0 } :
+    p <= 68 ? { t: '小不幸運 🌧️', c: '#fb923c', s: -1 } :
+              { t: '小倒霉鬼 🌩️', c: '#dc2626', s: -2 };
+
+// ── 手動修改已墊抽數 ───────────────────────────────────────
 function editPending(type) {
     const v = prompt('手動修改『已墊抽數』\n(請輸入您目前已經墊了幾抽，0~139)：', getP(type));
     if (v !== null && !isNaN(parseInt(v))) setP(type, parseInt(v));
 }
 
+// ── 新增紀錄 ───────────────────────────────────────────────
 function addRecord() {
-    const banner = document.getElementById('bannerName').value.trim();
-    const main = document.querySelector('input[name="mainPool"]:checked').value;
-    const sub = document.querySelector('input[name="subPool"]:checked').value;
+    const banner     = document.getElementById('bannerName').value.trim();
+    const main       = document.querySelector('input[name="mainPool"]:checked').value;
+    const sub        = document.querySelector('input[name="subPool"]:checked').value;
     const pulledLead = document.querySelector('input[name="pulledLead"]:checked').value;
-    const card = document.getElementById('cardName').value.trim();
-    const pulls = parseInt(document.getElementById('pulls').value);
+    const card       = document.getElementById('cardName').value.trim();
+    const pulls      = parseInt(document.getElementById('pulls').value);
 
     if (!banner) return alert('請輸入卡池名稱！');
     if (isNaN(pulls) || pulls < 1 || pulls > 70) return alert('請輸入 1-70 抽！');
 
     const event = findEvent(banner, main);
-    const isUpCard = event && event.cards[pulledLead] && (!card || event.cards[pulledLead].includes(card));
+    // [FIX #2] 移除 !card 條件：空白卡名不應被視為 UP 卡，避免影響統計正確性
+    const isUpCard = !!(event && card && event.cards[pulledLead]?.includes(card));
     const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
 
-    let judgeResult = isUpCard ? 
-        (sub === '混池' && oshis.length > 0 && !oshis.includes(pulledLead) ? 'wai_lim' : 'target') : 
-        'wai_std';
-        
-    const poolKey = main === '限定' ? 'lim' : 're';
+    const judgeResult = isUpCard
+        ? (sub === '混池' && oshis.length > 0 && !oshis.includes(pulledLead) ? 'wai_lim' : 'target')
+        : 'wai_std';
+
+    const poolKey  = main === '限定' ? 'lim' : 're';
     const currentP = getP(poolKey);
-    
-    let rec = { id: Date.now(), main, sub, lead: pulledLead, banner, card, pulls, res: judgeResult };
+
+    const rec = { id: Date.now(), main, sub, lead: pulledLead, banner, card, pulls, res: judgeResult };
 
     if (judgeResult === 'target') {
-        rec.total = currentP + pulls; 
-        _setP(poolKey, window.currentPendingPulls); 
+        rec.total = currentP + pulls;
+        _setP(poolKey, window.currentPendingPulls);
     } else {
-        rec.total = pulls; 
+        rec.total = pulls;
         const isStandard = typeof standardCards !== 'undefined' && Object.values(standardCards).flat().includes(card);
         _setP(poolKey, isStandard ? (70 + window.currentPendingPulls) : (currentP + pulls));
     }
 
-    window.currentPendingPulls = 0; 
-    let db = getDB(); db.push(rec); setDB(db);
-    document.getElementById('cardName').value = ''; document.getElementById('pulls').value = '';
+    window.currentPendingPulls = 0;
+    const db = getDB();
+    db.push(rec);
+    setDB(db);
+    document.getElementById('cardName').value = '';
+    document.getElementById('pulls').value = '';
     renderUI();
 }
 
-function deleteRec(id) { if (confirm('確定刪除此筆紀錄？')) { setDB(getDB().filter(r => r.id !== id)); renderUI(); } }
-function clearAll() { if (confirm('確定清空所有資料？')) { localStorage.removeItem('db_v4'); _setP('lim', 0); _setP('re', 0); window.currentPendingPulls = 0; renderUI(); } }
+function deleteRec(id) {
+    if (confirm('確定刪除此筆紀錄？')) { setDB(getDB().filter(r => r.id !== id)); renderUI(); }
+}
 
-function updateLuckStats() {
-    const db = getDB();
+function clearAll() {
+    if (confirm('確定清空所有資料？')) {
+        localStorage.removeItem('db_v4');
+        _setP('lim', 0);
+        _setP('re', 0);
+        window.currentPendingPulls = 0;
+        renderUI();
+    }
+}
+
+// ── 統計面板 ───────────────────────────────────────────────
+// [FIX #4] 接受外部傳入的 db 參數，避免 renderUI 呼叫時重複解析 localStorage
+// [FIX #9] 合併原本的 calcPercentile 進 getStats，消除 beatPercent 的重複計算
+function updateLuckStats(db = getDB()) {
     const totalPulls = db.reduce((sum, r) => sum + r.pulls, 0);
     document.getElementById('statTotalPulls').innerText = totalPulls;
 
-    const totalDiamonds = totalPulls * 150;
     const diamondEl = document.getElementById('statTotalDiamonds');
-    if (diamondEl) diamondEl.innerText = `(${totalDiamonds.toLocaleString()} 鑽)`;
+    if (diamondEl) diamondEl.innerText = `(${(totalPulls * 150).toLocaleString()} 鑽)`;
 
-    const avgFiveStar = db.length > 0 ? (totalPulls / db.length).toFixed(1) : '0.0';
-    document.getElementById('statAvgFiveStar').innerText = avgFiveStar;
+    document.getElementById('statAvgFiveStar').innerText =
+        db.length > 0 ? (totalPulls / db.length).toFixed(1) : '0.0';
 
     const targetsOnly = db.filter(r => r.res === 'target');
-    const avgLimited = targetsOnly.length > 0 ? (targetsOnly.reduce((sum, r) => sum + r.total, 0) / targetsOnly.length).toFixed(1) : '0.0';
-    document.getElementById('statAvgLimited').innerText = avgLimited;
+    document.getElementById('statAvgLimited').innerText =
+        targetsOnly.length > 0
+            ? (targetsOnly.reduce((sum, r) => sum + r.total, 0) / targetsOnly.length).toFixed(1)
+            : '0.0';
 
     const mainF = document.getElementById('mainPoolLuckSelect').value;
-    const subF = document.getElementById('subPoolLuckSelect').value;
-    
-    const calcPercentile = (avgPulls) => {
-        if (!avgPulls || avgPulls <= 0) return '';
-        let pullCount = Math.max(1, Math.min(140, Math.round(parseFloat(avgPulls))));
-        if (typeof beatPercentTable === 'undefined') return ''; 
-        let beatPercent = beatPercentTable[pullCount];
-        return `幸運度超過了約 ${beatPercent}% 的玩家`;
-    };
+    const subF  = document.getElementById('subPoolLuckSelect').value;
 
-    const getStats = (items) => {
+    // [FIX #9] 原 calcPercentile 與 getStats 各算一次 beatPercent，現合併為一次
+    function getStats(items) {
         if (!items.length) return { text: '---', percentile: '' };
-        
-        const avgLimitedPulls = items.reduce((a, b) => a + b.total, 0) / items.length;
-        
-        let beatPercent = 0;
-        if (typeof beatPercentTable !== 'undefined') {
-            let pullCount = Math.max(1, Math.min(140, Math.round(avgLimitedPulls)));
-            beatPercent = beatPercentTable[pullCount];
-        }
-        
-        let text = '';
-        if (beatPercent >= 85) text = '<span class="title-god">✨ 天選之子</span>';
+        const avg        = items.reduce((a, b) => a + b.total, 0) / items.length;
+        const pullCount  = Math.max(1, Math.min(140, Math.round(avg)));
+        const beatPercent = (typeof beatPercentTable !== 'undefined') ? beatPercentTable[pullCount] : 0;
+
+        let text;
+        if      (beatPercent >= 85) text = '<span class="title-god">✨ 天選之子</span>';
         else if (beatPercent >= 67) text = '<span class="title-lucky">🌟 幸運兒</span>';
         else if (beatPercent >= 49) text = '<span class="title-plain">😐 平凡人</span>';
         else if (beatPercent >= 31) text = '<span class="title-unlucky">🌧️ 小不幸運</span>';
-        else text = '<span class="title-bad">🌩️ 小倒霉鬼</span>';
+        else                        text = '<span class="title-bad">🌩️ 小倒霉鬼</span>';
 
-        return { text, percentile: calcPercentile(avgLimitedPulls) };
-    };
+        const percentile = beatPercent > 0 ? `幸運度超過了約 ${beatPercent}% 的玩家` : '';
+        return { text, percentile };
+    }
 
-    document.getElementById('luckMainVal').innerHTML = getStats(db.filter(r => r.res === 'target' && (mainF === '綜合' || r.main === mainF))).text;
-    document.getElementById('luckMainPercentile').innerHTML = getStats(db.filter(r => r.res === 'target' && (mainF === '綜合' || r.main === mainF))).percentile;
-    document.getElementById('luckSubVal').innerHTML = getStats(db.filter(r => r.res === 'target' && r.sub === subF)).text;
-    document.getElementById('luckSubPercentile').innerHTML = getStats(db.filter(r => r.res === 'target' && r.sub === subF)).percentile;
+    // [FIX #5] 快取 getStats 結果，同一份篩選資料只計算一次
+    const mainStats = getStats(db.filter(r => r.res === 'target' && (mainF === '綜合' || r.main === mainF)));
+    const subStats  = getStats(db.filter(r => r.res === 'target' && r.sub === subF));
+
+    document.getElementById('luckMainVal').innerHTML        = mainStats.text;
+    document.getElementById('luckMainPercentile').innerHTML = mainStats.percentile;
+    document.getElementById('luckSubVal').innerHTML         = subStats.text;
+    document.getElementById('luckSubPercentile').innerHTML  = subStats.percentile;
 }
 
+// ── 工具函式 ───────────────────────────────────────────────
 function getEventDate(eventName, mainPool) {
     const target = findEvent(eventName, mainPool);
     return target ? parseEventTime(target) : 0;
 }
 
+// ── 一次性資料遷移 ─────────────────────────────────────────
+// [FIX #3] 將舊格式轉換（oshi_spook → wai_std）從 renderUI 中獨立出來，
+// 只在啟動時執行一次，不再於每次渲染時重複寫入 localStorage
+function migrateDB() {
+    const db = getDB();
+    let changed = false;
+    db.forEach(r => {
+        if (r.res === 'oshi_spook') { r.res = 'wai_std'; changed = true; }
+    });
+    if (changed) setDB(db);
+}
+
+// ── 主渲染函式 ─────────────────────────────────────────────
 function renderUI() {
     document.getElementById('pLim').innerText = 140 - getP('lim');
     document.getElementById('pRe').innerText  = 140 - getP('re');
-    let db = getDB();
+
+    // [FIX #4] getDB() 只呼叫一次，同一個 db 實例貫穿整個渲染流程
+    const db    = getDB();
     const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
 
-    // 資料清理與自動校正
+    // [FIX #3] 校正邏輯保留，但只在資料真正有異動時才呼叫 setDB
+    // [FIX #6] setDB 本身已會過濾衍生欄位，不會將 _evTime 等存入 localStorage
+    let dbChanged = false;
     db.forEach(r => {
-        if (r.res === 'oshi_spook') r.res = 'wai_std';
-        
         if (r.card && r.card !== '未知') {
-            let trueLead = null;
-            if (typeof standardCards !== 'undefined') {
-                for (const lead in standardCards) {
-                    if (standardCards[lead].includes(r.card)) { trueLead = lead; break; }
-                }
-            }
-            if (!trueLead && typeof eventCards !== 'undefined') {
-                for (const event of eventCards) {
-                    for (const lead in event.cards) {
-                        if (event.cards[lead] && event.cards[lead].includes(r.card)) { trueLead = lead; break; }
-                    }
-                    if (trueLead) break;
-                }
-            }
-            
+            const trueLead = findTrueLead(r.card);
             if (trueLead) {
-                r.lead = trueLead;
-                const event = findEvent(r.banner, r.main);
-                const isUpCard = event && event.cards[trueLead] && event.cards[trueLead].includes(r.card);
-                
-                if (isUpCard) {
-                    r.res = (r.sub === '混池' && oshis.length > 0 && !oshis.includes(trueLead)) ? 'wai_lim' : 'target';
-                } else {
-                    r.res = 'wai_std';
-                }
+                if (r.lead !== trueLead) { r.lead = trueLead; dbChanged = true; }
+                const event    = findEvent(r.banner, r.main);
+                const isUpCard = event?.cards[trueLead]?.includes(r.card);
+                const newRes   = isUpCard
+                    ? (r.sub === '混池' && oshis.length > 0 && !oshis.includes(trueLead) ? 'wai_lim' : 'target')
+                    : 'wai_std';
+                if (r.res !== newRes) { r.res = newRes; dbChanged = true; }
             }
         }
-        
-        const evTime = getEventDate(r.banner, r.main);
-        r._evTime = evTime; r._sortTime = evTime || r.id; r._entryOrder = r.id;
-        r.luck = (r.res === 'target') ? judgeT(r.total) : judgeS(r.pulls);
+        // 計算顯示用衍生欄位（不存入 localStorage，由 setDB 過濾）
+        const evTime   = getEventDate(r.banner, r.main);
+        r._evTime      = evTime;
+        r._sortTime    = evTime || r.id;
+        r._entryOrder  = r.id;
+        r.luck         = (r.res === 'target') ? judgeT(r.total) : judgeS(r.pulls);
     });
-    
-    setDB(db);
-    db.sort((a, b) => b._sortTime - a._sortTime || b._entryOrder - a._entryOrder);
-    
-    updateLuckStats();
 
+    if (dbChanged) setDB(db);
+
+    db.sort((a, b) => b._sortTime - a._sortTime || b._entryOrder - a._entryOrder);
+
+    // [FIX #4] 傳入已解析的 db，updateLuckStats 不再自行呼叫 getDB()
+    updateLuckStats(db);
+
+    // ── 巔峰榜 ──
     let peakHTML = '';
     if (db.length > 0) {
         const targets = db.filter(r => r.res === 'target');
@@ -370,39 +441,36 @@ function renderUI() {
             const best = [...targets].sort((a, b) => b.luck.s - a.luck.s || a.total - b.total)[0];
             peakHTML += `<div class="peak-item"><span class="peak-label-best">🏆 巔峰紀錄:</span> <span>${best.lead ? (oshis.includes(best.lead) ? '💖' : '') + (leadIcons[best.lead] || '') + best.lead : ''} ${best.banner} (${best.total}抽)</span></div>`;
         }
-        
         const waiR = db.filter(r => ['wai_std', 'wai_lim', 'wai'].includes(r.res));
         if (waiR.length > 0) {
-            const counts = {}; waiR.forEach(r => counts[r.lead] = (counts[r.lead] || 0) + 1);
-            let maxC = 0; let maxL = [];
-            for (const l in counts) { if (counts[l] > maxC) { maxC = counts[l]; maxL = [l]; } else if (counts[l] === maxC) maxL.push(l); }
+            const counts = {};
+            waiR.forEach(r => counts[r.lead] = (counts[r.lead] || 0) + 1);
+            let maxC = 0, maxL = [];
+            for (const l in counts) {
+                if (counts[l] > maxC) { maxC = counts[l]; maxL = [l]; }
+                else if (counts[l] === maxC) maxL.push(l);
+            }
             peakHTML += `<div class="peak-item" style="margin-top:4px;"><span class="peak-label-spook">💔 歪卡常客:</span> <span>${maxL.map(l => (leadIcons[l] || '') + l).join('、')} (${maxC}次)</span></div>`;
         }
     }
-    document.getElementById('peakBoard').innerHTML = peakHTML || '<div style="text-align:center;font-size:12px;color:var(--text-sub)">尚無資料</div>';
+    document.getElementById('peakBoard').innerHTML =
+        peakHTML || '<div style="text-align:center;font-size:12px;color:var(--text-sub)">尚無資料</div>';
 
-    // 🌟 長條圖專屬過濾邏輯
+    // ── 紀錄列表（含長條圖） ──
     const filterSelect = document.getElementById('recordFilterSelect');
-    const filterVal = filterSelect ? filterSelect.value : '全部';
-    
-    let displayDb = db;
-    if (filterVal !== '全部') {
-        displayDb = db.filter(r => r.main === filterVal);
-    }
+    const filterVal    = filterSelect ? filterSelect.value : '全部';
+    const displayDb    = filterVal !== '全部' ? db.filter(r => r.main === filterVal) : db;
 
     document.getElementById('recordList').innerHTML = displayDb.map(r => {
         let cardTypeStr, statusColor;
-        
-        if (r.res === 'target') { 
-            cardTypeStr = '🎯 限定'; statusColor = 'var(--primary)'; 
-        } else if (r.res === 'wai_lim') { 
-            cardTypeStr = '💔 限定'; statusColor = '#ef4444'; 
-        } else { 
-            cardTypeStr = '☠️ 常駐'; statusColor = '#475569'; 
-        }
-        
-        const d = new Date(r._evTime || r.id);
-        const dateStr = r._evTime ? `[${d.getFullYear().toString().slice(2)}/${(d.getMonth()+1).toString().padStart(2,'0')}]` : '[未知]';
+        if      (r.res === 'target')  { cardTypeStr = '🎯 限定'; statusColor = 'var(--primary)'; }
+        else if (r.res === 'wai_lim') { cardTypeStr = '💔 限定'; statusColor = '#ef4444'; }
+        else                          { cardTypeStr = '☠️ 常駐'; statusColor = '#475569'; }
+
+        const d       = new Date(r._evTime || r.id);
+        const dateStr = r._evTime
+            ? `[${d.getFullYear().toString().slice(2)}/${(d.getMonth() + 1).toString().padStart(2, '0')}]`
+            : '[未知]';
         const isBlack = r.pulls > 55 && r.pulls <= 62 && r.luck.s <= 1;
 
         return `
@@ -423,4 +491,10 @@ function renderUI() {
     }).join('');
 }
 
-initTheme(); loadOshis(); updateBannerRecommendations(); renderUI();
+// ── 啟動 ───────────────────────────────────────────────────
+// [FIX #3] migrateDB 只在啟動時執行一次，不再混入每次 renderUI
+migrateDB();
+initTheme();
+loadOshis();
+updateBannerRecommendations();
+renderUI();
