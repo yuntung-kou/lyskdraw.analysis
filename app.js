@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════
-//  app.js — 戀與深空抽卡分析器 (全自動偵測保底版 + 精確體質分級)
+//  app.js — 戀與深空抽卡分析器 (標籤動態核發 + 拔除防歪標籤)
 // ════════════════════════════════════════════════════════════
 
 const leadIcons = { '祁煜': '🐟', '沈星回': '🌟', '黎深': '🍐', '秦徹': '🚘', '夏以晝': '🍎' };
@@ -205,7 +205,7 @@ window.autoFillFromOCR = function(pulls, cardName, latestTime, pendingPulls) {
     updatePulledCardList();
 };
 
-// 🌟 全新評估標準：根據官方機率分佈對應 15%, 33%, 51%, 69% 玩家落點
+// 🌟 全新評估標準：根據官方機率分佈對應 前15%, 33%, 51%, 69% 玩家落點
 // 判斷單次出金 (70抽底)：前15%(<=16抽), 前33%(<=40抽), 前51%(<=61抽), 前69%(<=62抽)
 const judgeS = (p) => p <= 16 ? { t: '天選之子 ✨', c: '#16a34a', s: 2 } : p <= 40 ? { t: '幸運兒 🌟', c: '#4ade80', s: 1 } : p <= 61 ? { t: '平凡人 😐', c: '#facc15', s: 0 } : p <= 62 ? { t: '小不幸運 🌧️', c: '#fb923c', s: -1 } : { t: '小倒霉鬼 🌩️', c: '#dc2626', s: -2 };
 // 判斷限定出金 (140抽底)：前15%(<=30抽), 前33%(<=61抽), 前51%(<=65抽), 前69%(<=68抽)
@@ -231,16 +231,22 @@ function addRecord() {
     const isUpCard = event && event.cards[pulledLead] && (!card || event.cards[pulledLead].includes(card));
     const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
 
-    let judgeResult = isUpCard ? (sub === '混池' && oshis.length > 0 && !oshis.includes(pulledLead) ? 'wai_lim' : 'target') : (oshis.includes(pulledLead) ? 'oshi_spook' : 'wai_std');
+    // 🌟 完全移除 oshi_spook：如果是限定卡，檢查是否為歪限定；如果不是限定卡，一律算作常駐 (wai_std)
+    let judgeResult = isUpCard ? 
+        (sub === '混池' && oshis.length > 0 && !oshis.includes(pulledLead) ? 'wai_lim' : 'target') : 
+        'wai_std';
+        
     const poolKey = main === '限定' ? 'lim' : 're';
     const currentP = getP(poolKey);
+    
+    // 建立新紀錄（不寫死 luck 標籤，讓 renderUI 動態核發）
     let rec = { id: Date.now(), main, sub, lead: pulledLead, banner, card, pulls, res: judgeResult };
 
     if (judgeResult === 'target') {
-        rec.total = currentP + pulls; rec.luck = judgeT(rec.total);
+        rec.total = currentP + pulls; 
         _setP(poolKey, window.currentPendingPulls); 
     } else {
-        rec.total = pulls; rec.luck = judgeS(pulls);
+        rec.total = pulls; 
         const isStandard = typeof standardCards !== 'undefined' && Object.values(standardCards).flat().includes(card);
         _setP(poolKey, isStandard ? (70 + window.currentPendingPulls) : (currentP + pulls));
     }
@@ -261,7 +267,7 @@ function updateLuckStats() {
     const totalPulls = db.reduce((sum, r) => sum + r.pulls, 0);
     document.getElementById('statTotalPulls').innerText = totalPulls;
 
-    // 計算並顯示等值的鑽石數量 (總抽數 x 150)
+    // 💎 計算並顯示等值的鑽石數量 (總抽數 x 150)
     const totalDiamonds = totalPulls * 150;
     const diamondEl = document.getElementById('statTotalDiamonds');
     if (diamondEl) diamondEl.innerText = `(${totalDiamonds.toLocaleString()} 鑽)`;
@@ -287,107 +293,9 @@ function updateLuckStats() {
 
     const getStats = (items) => {
         if (!items.length) return { text: '---', percentile: '' };
+        
+        // 使用動態計算出的 luck.s 來決定平均分數
+        const avgScore = items.reduce((a, b) => a + b.luck.s, 0) / items.length;
         const avgLimitedPulls = items.reduce((a, b) => a + b.total, 0) / items.length;
         
-        let beatPercent = 0;
-        if (typeof beatPercentTable !== 'undefined') {
-            let pullCount = Math.max(1, Math.min(140, Math.round(avgLimitedPulls)));
-            beatPercent = beatPercentTable[pullCount];
-        }
-        
-        // 🌟 總面板體質：直接掛鉤真正的 % 數標準 (前15%, 33%, 51%, 69%)
-        let text = '';
-        if (beatPercent >= 85) text = '<span class="title-god">✨ 天選之子</span>';
-        else if (beatPercent >= 67) text = '<span class="title-lucky">🌟 幸運兒</span>';
-        else if (beatPercent >= 49) text = '<span class="title-plain">😐 平凡人</span>';
-        else if (beatPercent >= 31) text = '<span class="title-unlucky">🌧️ 小不幸運</span>';
-        else text = '<span class="title-bad">🌩️ 小倒霉鬼</span>';
-
-        return { text, percentile: calcPercentile(avgLimitedPulls) };
-    };
-
-    const mainItems = db.filter(r => r.res === 'target' && (mainF === '綜合' || r.main === mainF));
-    const subItems = db.filter(r => r.res === 'target' && r.sub === subF);
-
-    const mainRes = getStats(mainItems);
-    document.getElementById('luckMainVal').innerHTML = mainRes.text;
-    document.getElementById('luckMainPercentile').innerHTML = mainRes.percentile;
-
-    const subRes = getStats(subItems);
-    document.getElementById('luckSubVal').innerHTML = subRes.text;
-    document.getElementById('luckSubPercentile').innerHTML = subRes.percentile;
-}
-
-function getEventDate(eventName, mainPool) {
-    const target = findEvent(eventName, mainPool);
-    return target ? parseEventTime(target) : 0;
-}
-
-function renderUI() {
-    document.getElementById('pLim').innerText = 140 - getP('lim');
-    document.getElementById('pRe').innerText  = 140 - getP('re');
-    let db = getDB();
-    const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
-
-    db.forEach(r => {
-        const evTime = getEventDate(r.banner, r.main);
-        r._evTime = evTime; r._sortTime = evTime || r.id; r._entryOrder = r.id;
-    });
-    db.sort((a, b) => b._sortTime - a._sortTime || b._entryOrder - a._entryOrder);
-    
-    // 每次重新渲染時，更新統計資料
-    updateLuckStats();
-
-    let peakHTML = '';
-    if (db.length > 0) {
-        const targets = db.filter(r => r.res === 'target');
-        if (targets.length > 0) {
-            const best = [...targets].sort((a, b) => b.luck.s - a.luck.s || a.total - b.total)[0];
-            peakHTML += `<div class="peak-item"><span class="peak-label-best">🏆 巔峰紀錄:</span> <span>${best.lead ? (oshis.includes(best.lead) ? '💖' : '') + (leadIcons[best.lead] || '') + best.lead : ''} ${best.banner} (${best.total}抽)</span></div>`;
-        }
-        const waiR = db.filter(r => ['wai_std','wai_lim','wai','oshi_spook'].includes(r.res));
-        if (waiR.length > 0) {
-            const counts = {}; waiR.forEach(r => counts[r.lead] = (counts[r.lead] || 0) + 1);
-            let maxC = 0; let maxL = [];
-            for (const l in counts) { if (counts[l] > maxC) { maxC = counts[l]; maxL = [l]; } else if (counts[l] === maxC) maxL.push(l); }
-            peakHTML += `<div class="peak-item" style="margin-top:4px;"><span class="peak-label-spook">💔 歪卡常客:</span> <span>${maxL.map(l => (leadIcons[l] || '') + l).join('、')} (${maxC}次)</span></div>`;
-        }
-    }
-    document.getElementById('peakBoard').innerHTML = peakHTML || '<div style="text-align:center;font-size:12px;color:var(--text-sub)">尚無資料</div>';
-
-    document.getElementById('recordList').innerHTML = db.map(r => {
-        let cardTypeStr, statusColor;
-        if (r.res === 'target') { cardTypeStr = '🎯 限定'; statusColor = 'var(--primary)'; }
-        else if (r.res === 'wai_lim') { cardTypeStr = '💔 限定'; statusColor = '#ef4444'; }
-        else if (r.res === 'oshi_spook') { cardTypeStr = '💖 防歪主推'; statusColor = 'var(--oshi-color)'; }
-        else {
-            let isUp = false;
-            if (typeof eventCards !== 'undefined') {
-                const ev = findEvent(r.banner, r.main);
-                if (ev && ev.cards[r.lead] && (!r.card || ev.cards[r.lead].includes(r.card))) isUp = true;
-            }
-            cardTypeStr = isUp ? '💔 限定' : '☠️ 常駐'; statusColor = isUp ? '#ef4444' : '#475569';
-        }
-        const d = new Date(r._evTime || r.id);
-        const dateStr = r._evTime ? `[${d.getFullYear().toString().slice(2)}/${(d.getMonth()+1).toString().padStart(2,'0')}]` : '[未知]';
-        const isBlack = r.pulls > 55 && r.pulls <= 62 && r.luck.s <= 1;
-
-        return `
-        <div class="h-record-card">
-            <div class="h-bar-bg" style="width: ${Math.min((r.pulls / 70) * 100, 100)}%; background-color: ${r.luck.c};"></div>
-            <div class="h-content">
-                <div class="h-left">
-                    <div class="h-tags">${r.main === '復刻' ? '<span class="tag tag-re">復刻</span>' : ''}<span class="tag tag-lim">${r.sub}</span><span class="tag" style="background-color: ${statusColor};">${cardTypeStr}</span></div>
-                    <span class="h-title"><span style="font-size: 15px; font-weight: bold; color: var(--text-main);">${r.card || '未知'}</span><span style="font-size: 12px; font-weight: normal;"> | ${r.banner}</span><span class="h-date">${dateStr}</span></span>
-                </div>
-                <div class="h-right">
-                    <div class="h-pulls"><span class="pull-num">${r.pulls}</span> 抽</div>
-                    <div class="h-luck ${r.pulls > 55 ? 'luck-high' : ''} ${isBlack ? 'luck-black-light' : ''}" style="${r.pulls <= 55 ? 'background-color:' + r.luck.c + 'BF;color:#fff;' : ''}">${r.luck.t}</div>
-                    <button class="del-btn-icon" onclick="deleteRec(${r.id})">🗑️</button>
-                </div>
-            </div>
-        </div>`;
-    }).join('');
-}
-
-initTheme(); loadOshis(); updateBannerRecommendations(); renderUI();
+        let beatPercent = 0
