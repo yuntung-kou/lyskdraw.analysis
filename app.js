@@ -275,12 +275,17 @@ function updateLuckStats() {
     // --- 1. 計算基本統計數據 ---
     const totalPulls = db.reduce((sum, r) => sum + r.pulls, 0);
     document.getElementById('statTotalPulls').innerText = totalPulls;
+    
+    // 💎 新增：計算並顯示等值的鑽石數量 (總抽數 x 150)
+    const totalDiamonds = totalPulls * 150;
+    // 使用 toLocaleString() 加上千位數逗號，例如會顯示 (10,200 鑽)
+    document.getElementById('statTotalDiamonds').innerText = `(${totalDiamonds.toLocaleString()} 鑽)`;
 
-    // 計算平均出五星
+    // 平均出五星
     const avgFiveStar = db.length > 0 ? (totalPulls / db.length).toFixed(1) : '0.0';
     document.getElementById('statAvgFiveStar').innerText = avgFiveStar;
 
-    // 計算平均出限定（僅計算 res === 'target' 的紀錄，其 total 欄位即為該次出限定所花費的總抽數）
+    // 平均出限定
     const targetsOnly = db.filter(r => r.res === 'target');
     const avgLimited = targetsOnly.length > 0 ? (targetsOnly.reduce((sum, r) => sum + r.total, 0) / targetsOnly.length).toFixed(1) : '0.0';
     document.getElementById('statAvgLimited').innerText = avgLimited;
