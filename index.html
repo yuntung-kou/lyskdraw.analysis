@@ -116,14 +116,18 @@
                 <div class="stat-card">
                     <div class="stat-title">限定池</div>
                     <div class="stat-value"><span id="statLimPulls">0</span><span class="stat-unit">抽</span></div>
+                    <div class="stat-diamonds" id="statLimDiamonds">(0 鑽)</div>
+                    <div class="stat-luck" id="statLimLuck">---</div>
                     <div class="sub-stats">
-                        <div class="sub-stat-item"><span class="sub-stat-val" id="statLimCount">0/0</span><span class="sub-stat-label">UP/歪</span></div>
+                        <div class="sub-stat-item"><span class="sub-stat-val" id="statLimCount">0/0</span><span class="sub-stat-label">UP/總五星</span></div>
                         <div class="sub-stat-item"><span class="sub-stat-val" id="statLimAvg">0.0</span><span class="sub-stat-label">UP平均</span></div>
                     </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-title">常駐池</div>
                     <div class="stat-value"><span id="statStdPulls">0</span><span class="stat-unit">抽</span></div>
+                    <div class="stat-diamonds" id="statStdDiamonds" style="visibility: hidden;">(0 鑽)</div>
+                    <div class="stat-luck" id="statStdLuck">---</div>
                     <div class="sub-stats">
                         <div class="sub-stat-item"><span class="sub-stat-val" id="statStdCount">0</span><span class="sub-stat-label">五星數</span></div>
                         <div class="sub-stat-item"><span class="sub-stat-val" id="statStdAvg">0.0</span><span class="sub-stat-label">五星平均</span></div>
@@ -132,36 +136,32 @@
                 <div class="stat-card">
                     <div class="stat-title">復刻池</div>
                     <div class="stat-value"><span id="statRePulls">0</span><span class="stat-unit">抽</span></div>
+                    <div class="stat-diamonds" id="statReDiamonds">(0 鑽)</div>
+                    <div class="stat-luck" id="statReLuck">---</div>
                     <div class="sub-stats">
-                        <div class="sub-stat-item"><span class="sub-stat-val" id="statReCount">0/0</span><span class="sub-stat-label">UP/歪</span></div>
+                        <div class="sub-stat-item"><span class="sub-stat-val" id="statReCount">0/0</span><span class="sub-stat-label">UP/總五星</span></div>
                         <div class="sub-stat-item"><span class="sub-stat-val" id="statReAvg">0.0</span><span class="sub-stat-label">UP平均</span></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title" style="margin-bottom: 2px;">
+                        <select id="statSubPoolSelect" class="card-select" onchange="updateLuckStats()">
+                            <option value="單人">單人池</option>
+                            <option value="日卡">日卡池</option>
+                            <option value="混池">混池</option>
+                        </select>
+                    </div>
+                    <div class="stat-value"><span id="statSubPulls">0</span><span class="stat-unit">抽</span></div>
+                    <div class="stat-diamonds" id="statSubDiamonds">(0 鑽)</div>
+                    <div class="stat-luck" id="statSubLuck">---</div>
+                    <div class="sub-stats">
+                        <div class="sub-stat-item"><span class="sub-stat-val" id="statSubCount">0/0</span><span class="sub-stat-label">UP/總五星</span></div>
+                        <div class="sub-stat-item"><span class="sub-stat-val" id="statSubAvg">0.0</span><span class="sub-stat-label">UP平均</span></div>
                     </div>
                 </div>
             </div>
 
-            <div class="section-header">📊 體質鑑定與巔峰榜</div>
-
-            <div class="overall-luck-board">
-                <div class="luck-card">
-                    <select id="mainPoolLuckSelect" class="luck-select" onchange="updateLuckStats()">
-                        <option value="綜合">綜合體質</option>
-                        <option value="限定" selected>限定池體質</option>
-                        <option value="復刻">復刻池體質</option>
-                    </select>
-                    <div id="luckMainVal" style="font-weight: bold;">---</div>
-                    <div id="luckMainPercentile" style="font-size: 11px; color: var(--text-sub); margin-top: 4px;"></div>
-                </div>
-                <div class="luck-card">
-                    <select id="subPoolLuckSelect" class="luck-select" onchange="updateLuckStats()">
-                        <option value="單人" selected>單人池體質</option>
-                        <option value="日卡">日卡池體質</option>
-                        <option value="混池">混池體質</option>
-                    </select>
-                    <div id="luckSubVal" style="font-weight: bold;">---</div>
-                    <div id="luckSubPercentile" style="font-size: 11px; color: var(--text-sub); margin-top: 4px;"></div>
-                </div>
-            </div>
-
+            <div class="section-header">🏆 巔峰榜</div>
             <div class="peak-board" id="peakBoard"></div>
 
             <div class="section-header">
