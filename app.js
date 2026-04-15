@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════
-//  app.js — 戀與深空抽卡分析器 (支援常駐池獨立計算與三欄排版)
+//  app.js — 戀與深空抽卡分析器 (支援四欄內嵌體質統計)
 // ════════════════════════════════════════════════════════════
 
 const leadIcons = { '祁煜': '🐟', '沈星回': '🌟', '黎深': '🍐', '秦徹': '🚘', '夏以晝': '🍎' };
@@ -71,7 +71,6 @@ function updateBannerRecommendations() {
     const mainPool = document.querySelector('input[name="mainPool"]:checked').value;
     const subPoolGroup = document.getElementById('subPoolGroup');
     
-    // 常駐池沒有副池分類與活動列表
     if (mainPool === '常駐') {
         if(subPoolGroup) subPoolGroup.style.opacity = '0.3';
         dropdownData.bannerName = ['極空迴音'];
@@ -168,7 +167,7 @@ window.autoFillFromUpCard = function () {
     const upCardName = document.getElementById('upCardName').value;
     if (!upCardName || typeof eventCards === 'undefined') return;
     const currentMainPool = document.querySelector('input[name="mainPool"]:checked').value;
-    if (currentMainPool === '常駐') return; // 常駐不適用反查限定活動
+    if (currentMainPool === '常駐') return; 
     
     const matchingEvents = eventCards.filter(e => Object.values(e.cards).some(cards => cards.includes(upCardName)));
     if (matchingEvents.length > 0) {
@@ -208,7 +207,6 @@ window.updatePulledCardList = function () {
     dropdownData.cardName = [...new Set(options)];
 };
 
-// 💡 修正點：加入 rawText 參數，從原始文字辨識是否為極空迴音
 window.autoFillFromOCR = function (pulls, cardName, latestTime, pendingPulls, rawText = '') {
     window.currentPendingPulls = pendingPulls || 0;
     document.getElementById('pulls').value = pulls;
@@ -228,7 +226,6 @@ window.autoFillFromOCR = function (pulls, cardName, latestTime, pendingPulls, ra
         }
     }
 
-    // 💡 修正邏輯：明確偵測到「極空迴音」四字才切為常駐池
     if (rawText.includes('極空迴音')) {
         document.querySelector(`input[name="mainPool"][value="常駐"]`).checked = true;
         document.getElementById('bannerName').value = '極空迴音';
@@ -304,7 +301,7 @@ function addRecord() {
 
     let judgeResult;
     if (main === '常駐') {
-        judgeResult = 'std'; // 常駐專屬標記
+        judgeResult = 'std'; 
     } else {
         judgeResult = isUpCard
             ? (sub === '混池' && oshis.length > 0 && !oshis.includes(pulledLead) ? 'wai_lim' : 'target')
@@ -318,10 +315,10 @@ function addRecord() {
 
     if (judgeResult === 'target' || judgeResult === 'std') {
         rec.total = currentP + pulls;
-        _setP(poolKey, window.currentPendingPulls); // 目標達成或常駐出金，皆清空墊子
+        _setP(poolKey, window.currentPendingPulls); 
     } else {
         rec.total = pulls;
-        _setP(poolKey, currentP + pulls); // 歪卡繼續累積
+        _setP(poolKey, currentP + pulls); 
     }
 
     window.currentPendingPulls = 0;
@@ -355,61 +352,77 @@ function clearAll() {
     }
 }
 
-// ── 三欄式統計面板 ─────────────────────────────────────────
+// ── 四欄式統計面板 ─────────────────────────────────────────
 function updateLuckStats(db = getDB()) {
-    // 1. 限定池數據
-    const limPulls = db.filter(r => r.main === '限定');
-    const limTotal = limPulls.reduce((sum, r) => sum + r.pulls, 0);
-    const limUp = limPulls.filter(r => r.res === 'target');
-    const limWai = limPulls.filter(r => r.res.startsWith('wai'));
-    document.getElementById('statLimPulls').innerText = limTotal;
-    document.getElementById('statLimCount').innerText = `${limUp.length}/${limWai.length}`;
-    document.getElementById('statLimAvg').innerText = limUp.length > 0 ? (limUp.reduce((s, r) => s + r.total, 0) / limUp.length).toFixed(1) : '0.0';
-
-    // 2. 常駐池數據
-    const stdPulls = db.filter(r => r.main === '常駐');
-    const stdTotal = stdPulls.reduce((sum, r) => sum + r.pulls, 0);
-    document.getElementById('statStdPulls').innerText = stdTotal;
-    document.getElementById('statStdCount').innerText = stdPulls.length;
-    document.getElementById('statStdAvg').innerText = stdPulls.length > 0 ? (stdPulls.reduce((s, r) => s + r.total, 0) / stdPulls.length).toFixed(1) : '0.0';
-
-    // 3. 復刻池數據
-    const rePulls = db.filter(r => r.main === '復刻');
-    const reTotal = rePulls.reduce((sum, r) => sum + r.pulls, 0);
-    const reUp = rePulls.filter(r => r.res === 'target');
-    const reWai = rePulls.filter(r => r.res.startsWith('wai'));
-    document.getElementById('statRePulls').innerText = reTotal;
-    document.getElementById('statReCount').innerText = `${reUp.length}/${reWai.length}`;
-    document.getElementById('statReAvg').innerText = reUp.length > 0 ? (reUp.reduce((s, r) => s + r.total, 0) / reUp.length).toFixed(1) : '0.0';
-
-    // 4. 體質鑑定區 (只判定限定/復刻的目標卡)
-    const mainF = document.getElementById('mainPoolLuckSelect').value;
-    const subF  = document.getElementById('subPoolLuckSelect').value;
-
-    function getStats(items) {
-        if (!items.length) return { text: '---', percentile: '' };
-        const avg        = items.reduce((a, b) => a + b.total, 0) / items.length;
-        const pullCount  = Math.max(1, Math.min(140, Math.round(avg)));
-        const beatPercent = (typeof beatPercentTable !== 'undefined') ? beatPercentTable[pullCount] : 0;
-
-        let text;
-        if      (beatPercent >= 85)   text = '<span class="title-god">✨ 天選之子</span>';
-        else if (beatPercent >= 63.5) text = '<span class="title-lucky">🌟 幸運兒</span>';
-        else if (beatPercent >= 48)   text = '<span class="title-plain">😐 平凡人</span>';
-        else if (beatPercent >= 32.5) text = '<span class="title-unlucky">🌧️ 小不幸運</span>';
-        else                          text = '<span class="title-bad">🌩️ 小倒霉鬼</span>';
-
-        const percentile = beatPercent > 0 ? `幸運度超過了約 ${beatPercent}% 的玩家` : '';
-        return { text, percentile };
+    // 依據平均抽數產生體質標籤 HTML (若無資料回傳 ---)
+    function getLuckHtml(avgPulls, isTarget) {
+        if (avgPulls === 0) return '<span style="color:var(--text-sub)">---</span>';
+        if (isTarget) {
+            const pullCount = Math.max(1, Math.min(140, Math.round(avgPulls)));
+            const beatPercent = (typeof beatPercentTable !== 'undefined') ? beatPercentTable[pullCount] : 0;
+            if      (beatPercent >= 85)   return '<span class="title-god">✨ 天選之子</span>';
+            else if (beatPercent >= 63.5) return '<span class="title-lucky">🌟 幸運兒</span>';
+            else if (beatPercent >= 48)   return '<span class="title-plain">😐 平凡人</span>';
+            else if (beatPercent >= 32.5) return '<span class="title-unlucky">🌧️ 小不幸運</span>';
+            else                          return '<span class="title-bad">🌩️ 小倒霉鬼</span>';
+        } else {
+            const p = avgPulls;
+            if (p <= 16) return '<span class="title-god">✨ 天選之子</span>';
+            if (p <= 40) return '<span class="title-lucky">🌟 幸運兒</span>';
+            if (p <= 61) return '<span class="title-plain">😐 平凡人</span>';
+            if (p <= 65) return '<span class="title-unlucky">🌧️ 小不幸運</span>';
+            return '<span class="title-bad">🌩️ 小倒霉鬼</span>';
+        }
     }
 
-    const mainStats = getStats(db.filter(r => r.res === 'target' && (mainF === '綜合' || r.main === mainF)));
-    const subStats  = getStats(db.filter(r => r.res === 'target' && r.sub === subF));
+    // 填充單一卡片的 Helper
+    function populateCard(prefix, pulls, targetCount, total5Count, avg, luckHtml, showDiamonds) {
+        document.getElementById(`stat${prefix}Pulls`).innerText = pulls;
+        const diaEl = document.getElementById(`stat${prefix}Diamonds`);
+        if (showDiamonds && diaEl) {
+            diaEl.innerText = `(${(pulls * 150).toLocaleString()} 鑽)`;
+            diaEl.style.visibility = 'visible';
+        } else if (diaEl) {
+            diaEl.style.visibility = 'hidden';
+        }
+        document.getElementById(`stat${prefix}Luck`).innerHTML = luckHtml;
 
-    document.getElementById('luckMainVal').innerHTML        = mainStats.text;
-    document.getElementById('luckMainPercentile').innerHTML = mainStats.percentile;
-    document.getElementById('luckSubVal').innerHTML         = subStats.text;
-    document.getElementById('luckSubPercentile').innerHTML  = subStats.percentile;
+        if (prefix === 'Std') {
+            document.getElementById(`stat${prefix}Count`).innerText = total5Count;
+            document.getElementById(`stat${prefix}Avg`).innerText = avg > 0 ? avg.toFixed(1) : '0.0';
+        } else {
+            document.getElementById(`stat${prefix}Count`).innerText = `${targetCount}/${total5Count}`;
+            document.getElementById(`stat${prefix}Avg`).innerText = avg > 0 ? avg.toFixed(1) : '0.0';
+        }
+    }
+
+    // 1. 限定池
+    const dbLim = db.filter(r => r.main === '限定');
+    const limPulls = dbLim.reduce((sum, r) => sum + r.pulls, 0);
+    const limTargets = dbLim.filter(r => r.res === 'target');
+    const limAvg = limTargets.length > 0 ? limTargets.reduce((s, r) => s + r.total, 0) / limTargets.length : 0;
+    populateCard('Lim', limPulls, limTargets.length, dbLim.length, limAvg, getLuckHtml(limAvg, true), true);
+
+    // 2. 常駐池
+    const dbStd = db.filter(r => r.main === '常駐');
+    const stdPulls = dbStd.reduce((sum, r) => sum + r.pulls, 0);
+    const stdAvg = dbStd.length > 0 ? dbStd.reduce((s, r) => s + r.total, 0) / dbStd.length : 0;
+    populateCard('Std', stdPulls, 0, dbStd.length, stdAvg, getLuckHtml(stdAvg, false), false);
+
+    // 3. 復刻池
+    const dbRe = db.filter(r => r.main === '復刻');
+    const rePulls = dbRe.reduce((sum, r) => sum + r.pulls, 0);
+    const reTargets = dbRe.filter(r => r.res === 'target');
+    const reAvg = reTargets.length > 0 ? reTargets.reduce((s, r) => s + r.total, 0) / reTargets.length : 0;
+    populateCard('Re', rePulls, reTargets.length, dbRe.length, reAvg, getLuckHtml(reAvg, true), true);
+
+    // 4. 自訂副池 (根據下拉選單即時篩選)
+    const subType = document.getElementById('statSubPoolSelect').value;
+    const dbSub = db.filter(r => r.sub === subType && (r.main === '限定' || r.main === '復刻'));
+    const subPulls = dbSub.reduce((sum, r) => sum + r.pulls, 0);
+    const subTargets = dbSub.filter(r => r.res === 'target');
+    const subAvg = subTargets.length > 0 ? subTargets.reduce((s, r) => s + r.total, 0) / subTargets.length : 0;
+    populateCard('Sub', subPulls, subTargets.length, dbSub.length, subAvg, getLuckHtml(subAvg, true), true);
 }
 
 // ── 工具函式 ───────────────────────────────────────────────
@@ -457,7 +470,6 @@ function renderUI() {
         r._sortTime    = evTime || r.id;
         r._entryOrder  = r.id;
         
-        // 常駐池依據其花費的總抽數計算體質 (以 70 抽為限)
         if (r.res === 'target') r.luck = judgeT(r.total);
         else if (r.main === '常駐') r.luck = judgeS(r.total);
         else r.luck = judgeS(r.pulls);
