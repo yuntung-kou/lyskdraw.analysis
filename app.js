@@ -1,12 +1,11 @@
 // ════════════════════════════════════════════════════════════
-//  app.js — 戀與深空抽卡分析器 (包含歷史資料自動校正與長條圖過濾)
+//  app.js — 戀與深空抽卡分析器 (修復墊抽數異常與 70 抽強制覆蓋 Bug)
 // ════════════════════════════════════════════════════════════
 
 const leadIcons = { '祁煜': '🐟', '沈星回': '🌟', '黎深': '🍐', '秦徹': '🚘', '夏以晝': '🍎' };
 
 window.currentPendingPulls = 0;
 
-// [FIX #6] setDB 在序列化前過濾衍生欄位，避免 _evTime / _sortTime / _entryOrder / luck 膨脹 localStorage
 const getDB = () => JSON.parse(localStorage.getItem('db_v4')) || [];
 const setDB = (db) => {
     const toSave = db.map(({ _evTime, _sortTime, _entryOrder, luck, ...rest }) => rest);
@@ -231,16 +230,11 @@ window.autoFillFromOCR = function (pulls, cardName, latestTime, pendingPulls) {
         if (radio) radio.checked = true;
     }
 
-    const poolKey = matchedEvent?.poolType.includes('復刻') ? 're' : 'lim';
-    const isUpCard = !!(matchedEvent && foundLead && matchedEvent.cards[foundLead]?.includes(cardName));
-    const progress = isUpCard ? window.currentPendingPulls : (70 + window.currentPendingPulls);
-    setP(poolKey, progress);
-
+    // 💡 [修正] 移除原本 OCR 會直接覆蓋 p_lim 的錯誤邏輯，避免干擾真正的歷史累加
     onPoolChange();
 };
 
 // ── 幸運判定 ───────────────────────────────────────────────
-// judgeS: 針對歪卡/單張五星的判定 (維持原設定)
 const judgeS = (p) =>
     p <= 16 ? { t: '天選之子 ✨', c: '#16a34a', s:  2 } :
     p <= 40 ? { t: '幸運兒 🌟',  c: '#4ade80', s:  1 } :
@@ -248,8 +242,6 @@ const judgeS = (p) =>
     p <= 65 ? { t: '小不幸運 🌧️', c: '#fb923c', s: -1 } :
               { t: '小倒霉鬼 🌩️', c: '#dc2626', s: -2 };
 
-// judgeT: 針對命中目標 UP 卡的判定 (以 140 抽為限)
-// 根據 luck_data.js 精準反推抽數門檻：PR 85, 63.5, 48, 32.5
 const judgeT = (p) =>
     p <= 30 ? { t: '天選之子 ✨', c: '#16a34a', s:  2 } :
     p <= 62 ? { t: '幸運兒 🌟',  c: '#4ade80', s:  1 } :
@@ -290,11 +282,11 @@ function addRecord() {
 
     if (judgeResult === 'target') {
         rec.total = currentP + pulls;
-        _setP(poolKey, window.currentPendingPulls);
+        _setP(poolKey, window.currentPendingPulls); // 出 UP 後，如果有剩餘未出金的墊抽數才加上去
     } else {
         rec.total = pulls;
-        const isStandard = typeof standardCards !== 'undefined' && Object.values(standardCards).flat().includes(card);
-        _setP(poolKey, isStandard ? (70 + window.currentPendingPulls) : (currentP + pulls));
+        // 💡 [修正] 移除原本「常駐卡強制變70抽」的錯誤邏輯，老老實實累積實際抽數
+        _setP(poolKey, currentP + pulls); 
     }
 
     window.currentPendingPulls = 0;
@@ -307,7 +299,15 @@ function addRecord() {
 }
 
 function deleteRec(id) {
-    if (confirm('確定刪除此筆紀錄？')) { setDB(getDB().filter(r => r.id !== id)); renderUI(); }
+    const db = getDB();
+    const rec = db.find(r => r.id === id);
+    if (!rec) return;
+
+    // 💡 [修正] 新增防呆提醒，避免刪除後墊抽數錯亂
+    if (confirm(`確定刪除 ${rec.card} (${rec.pulls}抽) 嗎？\n\n⚠️ 注意：系統不會自動扣除右上角的「已墊抽數」。\n如果您要重新輸入這筆資料，請務必手動點擊右上角 ✏️，將墊抽數字改回正確的狀態（或歸零），否則抽數會被重複疊加！`)) { 
+        setDB(db.filter(r => r.id !== id)); 
+        renderUI(); 
+    }
 }
 
 function clearAll() {
@@ -347,7 +347,6 @@ function updateLuckStats(db = getDB()) {
         const beatPercent = (typeof beatPercentTable !== 'undefined') ? beatPercentTable[pullCount] : 0;
 
         let text;
-        // 依照嚴格的 PR 門檻 (85 / 63.5 / 48 / 32.5)
         if      (beatPercent >= 85)   text = '<span class="title-god">✨ 天選之子</span>';
         else if (beatPercent >= 63.5) text = '<span class="title-lucky">🌟 幸運兒</span>';
         else if (beatPercent >= 48)   text = '<span class="title-plain">😐 平凡人</span>';
@@ -441,7 +440,7 @@ function renderUI() {
     document.getElementById('peakBoard').innerHTML =
         peakHTML || '<div style="text-align:center;font-size:12px;color:var(--text-sub)">尚無資料</div>';
 
-    // ── 紀錄列表（含長條圖） ──
+    // ── 紀錄列表 ──
     const filterSelect = document.getElementById('recordFilterSelect');
     const filterVal    = filterSelect ? filterSelect.value : '全部';
     const displayDb    = filterVal !== '全部' ? db.filter(r => r.main === filterVal) : db;
