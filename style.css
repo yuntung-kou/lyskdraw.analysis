@@ -79,11 +79,6 @@ p.subtitle { color: var(--text-sub); font-size: 13px; margin: 6px 0 0 0; }
 .pending-lim { color: var(--limited-color); border-right: 1px solid var(--border); }
 .pending-re  { color: var(--rerun-color); }
 
-.stats-board { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 15px; }
-.stat-card { background: var(--input-bg); padding: 12px 6px; border-radius: 8px; border: 1px solid var(--border); flex: 1; text-align: center; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-.stat-title { font-size: 12px; color: var(--text-sub); margin-bottom: 6px; font-weight: bold; }
-.stat-value { font-size: 18px; font-weight: bold; color: var(--primary); }
-
 .form-group { margin-bottom: 16px; }
 label.group-label { display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-sub); font-weight: bold; }
 input[type="text"], input[type="number"] { width: 100%; padding: 10px; background-color: var(--input-bg); border: 1px solid var(--border); color: var(--text-main); border-radius: 8px; box-sizing: border-box; font-size: 14px; }
@@ -109,9 +104,8 @@ input[type="radio"], input[type="checkbox"] { width: 16px; height: 16px; margin:
 [data-theme="light"] .ocr-box { background: rgba(219, 39, 119, 0.05); }
 
 .section-header { font-size: 16px; border-bottom: 2px solid var(--border); padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; margin-top: 25px; }
-.overall-luck-board { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-.luck-card { background: var(--input-bg); padding: 12px; border-radius: 8px; border: 1px solid var(--border); text-align: center; display: flex; flex-direction: column; align-items: center; }
-.luck-select { width: 100%; padding: 10px; background-color: var(--input-bg); border: 1px solid var(--border); color: var(--text-main); border-radius: 8px; box-sizing: border-box; font-size: 14px; font-weight: bold; outline: none; cursor: pointer; margin-bottom: 12px; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%238b5cf6%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E"); background-repeat: no-repeat; background-position: right 10px center; background-size: 16px; }
+
+.luck-select { padding: 10px; background-color: var(--input-bg); border: 1px solid var(--border); color: var(--text-main); border-radius: 8px; box-sizing: border-box; font-size: 14px; font-weight: bold; outline: none; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%238b5cf6%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E"); background-repeat: no-repeat; background-position: right 10px center; background-size: 16px; }
 [data-theme="light"] .luck-select { background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23db2777%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E"); }
 .luck-select option { background: var(--card-bg); color: var(--text-main); font-weight: normal; }
 
@@ -148,9 +142,18 @@ input[type="radio"], input[type="checkbox"] { width: 16px; height: 16px; margin:
 [data-theme="light"] .h-luck.luck-high { background-color: rgba(240, 240, 240, 0.5); color: #0f172a; }
 [data-theme="light"] .h-luck.luck-black-light { color: #0f172a !important; text-shadow: none; }
 
-/* ════ 三欄統計板塊專用樣式 ════ */
-.stat-unit { font-size: 13px; font-weight: normal; margin-left: 2px; color: var(--text-main); }
-.sub-stats { display: flex; justify-content: space-between; margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 8px; }
+/* ════ 四欄統計板塊專用樣式 ════ */
+.stats-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; }
+@media (max-width: 650px) { .stats-board { grid-template-columns: repeat(2, 1fr); } }
+.stat-card { background: var(--input-bg); padding: 10px 4px; border-radius: 8px; border: 1px solid var(--border); text-align: center; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.stat-title { font-size: 12px; color: var(--text-sub); margin-bottom: 2px; font-weight: bold; display: flex; justify-content: center; align-items: center; }
+.stat-value { font-size: 18px; font-weight: bold; color: var(--primary); }
+.stat-unit { font-size: 12px; font-weight: normal; margin-left: 2px; color: var(--text-main); }
+.stat-diamonds { font-size: 11px; color: var(--text-sub); margin-bottom: 4px; }
+.stat-luck { font-size: 13px; font-weight: bold; margin: 4px auto; padding: 2px 8px; background: rgba(139, 92, 246, 0.05); border-radius: 4px; display: inline-block; }
+.sub-stats { display: flex; justify-content: space-between; margin-top: 6px; border-top: 1px dashed var(--border); padding-top: 6px; }
 .sub-stat-item { display: flex; flex-direction: column; align-items: center; width: 50%; }
-.sub-stat-val { font-size: 14px; font-weight: bold; color: var(--text-main); }
-.sub-stat-label { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
+.sub-stat-val { font-size: 13px; font-weight: bold; color: var(--text-main); }
+.sub-stat-label { font-size: 10px; color: var(--text-sub); margin-top: 2px; }
+
+.card-select { background-color: transparent; border: none; color: var(--text-sub); font-weight: bold; font-size: 12px; outline: none; cursor: pointer; text-align: center; padding: 0; appearance: auto; }
