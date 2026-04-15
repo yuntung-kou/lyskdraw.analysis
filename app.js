@@ -1,10 +1,9 @@
 // ════════════════════════════════════════════════════════════
-//  app.js — 戀與深空抽卡分析器 (全自動偵測保底版 + 數據統計與精確體質)
+//  app.js — 戀與深空抽卡分析器 (全自動偵測保底版 + 精確體質分級)
 // ════════════════════════════════════════════════════════════
 
 const leadIcons = { '祁煜': '🐟', '沈星回': '🌟', '黎深': '🍐', '秦徹': '🚘', '夏以晝': '🍎' };
 
-// 💡 暫存 OCR 計算的墊底抽數，以防手動按「新增紀錄」時遺失
 window.currentPendingPulls = 0; 
 
 const getDB  = () => JSON.parse(localStorage.getItem('db_v4')) || [];
@@ -157,10 +156,8 @@ window.updatePulledCardList = function() {
     dropdownData.cardName = [...new Set(options)];
 };
 
-// 🌟 OCR 全自動填寫與保底邏輯運算
 window.autoFillFromOCR = function(pulls, cardName, latestTime, pendingPulls) {
     window.currentPendingPulls = pendingPulls || 0;
-
     document.getElementById('pulls').value = pulls;
     if (!cardName || cardName === '未知' || cardName.includes('未知卡名')) return;
     document.getElementById('cardName').value = cardName;
@@ -172,7 +169,6 @@ window.autoFillFromOCR = function(pulls, cardName, latestTime, pendingPulls) {
     let matchedEvent = null;
     if (typeof eventCards !== 'undefined') {
         let possibleEvents = eventCards.filter(ev => Object.values(ev.cards).some(c => c.includes(cardName)));
-
         if (possibleEvents.length > 0) {
             const year = latestTime ? new Date(latestTime).getFullYear().toString() : null;
             matchedEvent = possibleEvents.find(ev => ev.year === year) || possibleEvents[0];
@@ -184,11 +180,9 @@ window.autoFillFromOCR = function(pulls, cardName, latestTime, pendingPulls) {
     if (matchedEvent) {
         const isRerun = matchedEvent.poolType.includes('復刻');
         document.querySelector(`input[name="mainPool"][value="${isRerun ? '復刻' : '限定'}"]`).checked = true;
-        
         if (matchedEvent.poolType.includes('混池')) document.querySelector('input[name="subPool"][value="混池"]').checked = true;
         else if (matchedEvent.poolType.includes('日卡')) document.querySelector('input[name="subPool"][value="日卡"]').checked = true;
         else document.querySelector('input[name="subPool"][value="單人"]').checked = true;
-        
         document.getElementById('bannerName').value = matchedEvent.eventName;
     }
 
@@ -211,8 +205,11 @@ window.autoFillFromOCR = function(pulls, cardName, latestTime, pendingPulls) {
     updatePulledCardList();
 };
 
-const judgeS = (p) => p <= 7 ? { t: '天選之子 ✨', c: '#16a34a', s: 2 } : p <= 24 ? { t: '幸運兒 🌟', c: '#4ade80', s: 1 } : p <= 35 ? { t: '平凡人 😐', c: '#facc15', s: 0 } : p <= 45 ? { t: '小不幸運 🌧️', c: '#fb923c', s: -1 } : { t: '小倒霉鬼 🌩️', c: '#dc2626', s: -2 };
-const judgeT = (p) => p <= 26 ? { t: '天選之子 ✨', c: '#16a34a', s: 2 } : p <= 65 ? { t: '幸運兒 🌟', c: '#4ade80', s: 1 } : p <= 85 ? { t: '平凡人 😐', c: '#facc15', s: 0 } : p <= 110 ? { t: '小不幸運 🌧️', c: '#fb923c', s: -1 } : { t: '小倒霉鬼 🌩️', c: '#dc2626', s: -2 };
+// 🌟 全新評估標準：根據官方機率分佈對應 15%, 33%, 51%, 69% 玩家落點
+// 判斷單次出金 (70抽底)：前15%(<=16抽), 前33%(<=40抽), 前51%(<=61抽), 前69%(<=62抽)
+const judgeS = (p) => p <= 16 ? { t: '天選之子 ✨', c: '#16a34a', s: 2 } : p <= 40 ? { t: '幸運兒 🌟', c: '#4ade80', s: 1 } : p <= 61 ? { t: '平凡人 😐', c: '#facc15', s: 0 } : p <= 62 ? { t: '小不幸運 🌧️', c: '#fb923c', s: -1 } : { t: '小倒霉鬼 🌩️', c: '#dc2626', s: -2 };
+// 判斷限定出金 (140抽底)：前15%(<=30抽), 前33%(<=61抽), 前51%(<=65抽), 前69%(<=68抽)
+const judgeT = (p) => p <= 30 ? { t: '天選之子 ✨', c: '#16a34a', s: 2 } : p <= 61 ? { t: '幸運兒 🌟', c: '#4ade80', s: 1 } : p <= 65 ? { t: '平凡人 😐', c: '#facc15', s: 0 } : p <= 68 ? { t: '小不幸運 🌧️', c: '#fb923c', s: -1 } : { t: '小倒霉鬼 🌩️', c: '#dc2626', s: -2 };
 
 function editPending(type) {
     const v = prompt('手動修改『已墊抽數』\n(請輸入您目前已經墊了幾抽，0~139)：', getP(type));
@@ -249,7 +246,6 @@ function addRecord() {
     }
 
     window.currentPendingPulls = 0; 
-
     let db = getDB(); db.push(rec); setDB(db);
     document.getElementById('cardName').value = ''; document.getElementById('pulls').value = '';
     renderUI();
@@ -261,49 +257,50 @@ function clearAll() { if (confirm('確定清空所有資料？')) { localStorage
 function updateLuckStats() {
     const db = getDB();
     
-    // --- 1. 計算基本統計數據 ---
+    // 計算基本統計數據
     const totalPulls = db.reduce((sum, r) => sum + r.pulls, 0);
     document.getElementById('statTotalPulls').innerText = totalPulls;
 
-    // 💎 計算並顯示等值的鑽石數量 (總抽數 x 150)
+    // 計算並顯示等值的鑽石數量 (總抽數 x 150)
     const totalDiamonds = totalPulls * 150;
-    // 防呆檢查：確保 HTML 元素存在才更新
     const diamondEl = document.getElementById('statTotalDiamonds');
-    if (diamondEl) {
-        diamondEl.innerText = `(${totalDiamonds.toLocaleString()} 鑽)`;
-    }
+    if (diamondEl) diamondEl.innerText = `(${totalDiamonds.toLocaleString()} 鑽)`;
 
-    // 計算平均出五星
     const avgFiveStar = db.length > 0 ? (totalPulls / db.length).toFixed(1) : '0.0';
     document.getElementById('statAvgFiveStar').innerText = avgFiveStar;
 
-    // 計算平均出限定
     const targetsOnly = db.filter(r => r.res === 'target');
     const avgLimited = targetsOnly.length > 0 ? (targetsOnly.reduce((sum, r) => sum + r.total, 0) / targetsOnly.length).toFixed(1) : '0.0';
     document.getElementById('statAvgLimited').innerText = avgLimited;
 
-    // --- 2. 體質鑑定與精確幸運度百分比 ---
+    // 體質鑑定與精確幸運度百分比
     const mainF = document.getElementById('mainPoolLuckSelect').value;
     const subF = document.getElementById('subPoolLuckSelect').value;
     
     const calcPercentile = (avgPulls) => {
         if (!avgPulls || avgPulls <= 0) return '';
         let pullCount = Math.max(1, Math.min(140, Math.round(parseFloat(avgPulls))));
-        if (typeof beatPercentTable === 'undefined') return ''; // 避免 luck_data 未載入時報錯
+        if (typeof beatPercentTable === 'undefined') return ''; 
         let beatPercent = beatPercentTable[pullCount];
         return `幸運度超過了約 ${beatPercent}% 的玩家`;
     };
 
     const getStats = (items) => {
         if (!items.length) return { text: '---', percentile: '' };
-        const avgScore = items.reduce((a, b) => a + b.luck.s, 0) / items.length;
         const avgLimitedPulls = items.reduce((a, b) => a + b.total, 0) / items.length;
         
+        let beatPercent = 0;
+        if (typeof beatPercentTable !== 'undefined') {
+            let pullCount = Math.max(1, Math.min(140, Math.round(avgLimitedPulls)));
+            beatPercent = beatPercentTable[pullCount];
+        }
+        
+        // 🌟 總面板體質：直接掛鉤真正的 % 數標準 (前15%, 33%, 51%, 69%)
         let text = '';
-        if (avgScore >= 1.5) text = '<span class="title-god">✨ 天選之子</span>';
-        else if (avgScore >= 0.5) text = '<span class="title-lucky">🌟 幸運兒</span>';
-        else if (avgScore >= -0.5) text = '<span class="title-plain">😐 平凡人</span>';
-        else if (avgScore >= -1.5) text = '<span class="title-unlucky">🌧️ 小不幸運</span>';
+        if (beatPercent >= 85) text = '<span class="title-god">✨ 天選之子</span>';
+        else if (beatPercent >= 67) text = '<span class="title-lucky">🌟 幸運兒</span>';
+        else if (beatPercent >= 49) text = '<span class="title-plain">😐 平凡人</span>';
+        else if (beatPercent >= 31) text = '<span class="title-unlucky">🌧️ 小不幸運</span>';
         else text = '<span class="title-bad">🌩️ 小倒霉鬼</span>';
 
         return { text, percentile: calcPercentile(avgLimitedPulls) };
