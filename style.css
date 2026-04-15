@@ -1,4 +1,5 @@
-/* ════════════════════════════════════════════
+# I will generate the updated style.css file based on the feedback.
+css_content = """/* ════════════════════════════════════════════
    CSS 變數（色盤）
    深色模式為預設；[data-theme="light"] 覆蓋淺色版本
    ════════════════════════════════════════════ */
@@ -6,7 +7,7 @@
     --bg-color: #0f172a;
     --card-bg: #1e293b;
     --input-bg: #0f172a;
-    --primary: #a78bfa;         /* 🌟 主色：從深紫改為淺紫色 */
+    --primary: #a78bfa;         /* 🌟 主色：淺紫色 */
     --primary-hover: #8b5cf6;   /* 🌟 滑鼠懸停顏色 */
     --text-main: #f8fafc;
     --text-sub: #cbd5e1;
@@ -14,7 +15,10 @@
     --limited-color: #3b82f6;   
     --rerun-color: #ec4899;     
     --oshi-color: #ec4899;      
-    --title-color: #ddd6fe;     /* 🌟 標題與 OCR 區塊：調成更亮一點的淺紫 */
+    --title-color: #ddd6fe;     /* 🌟 標題與 OCR 區塊：亮淺紫 */
+    
+    /* 判定標籤顏色 - 深色模式 */
+    --luck-black-text: #fda4af;  /* 針對「黑號」的提醒色 */
 }
 
 [data-theme="light"] {
@@ -29,10 +33,13 @@
     --rerun-color: #a855f7;
     --oshi-color: #a855f7;
     --title-color: #db2777;
+    
+    /* 判定標籤顏色 - 淺色模式 */
+    --luck-black-text: #0f172a;
 }
 
 body {
-    font-family: 'Segoe UI', sans-serif;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
     background-color: var(--bg-color);
     color: var(--text-main);
     margin: 0;
@@ -120,7 +127,7 @@ input[type="radio"], input[type="checkbox"] { width: 16px; height: 16px; margin:
 .peak-label-best { color: #4ade80; }
 .peak-label-spook { color: #ef4444; }
 
-.h-record-card { position: relative; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; overflow: hidden; display: flex; height: 48px; }
+.h-record-card { position: relative; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; overflow: hidden; display: flex; height: 48px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 .h-bar-bg { position: absolute; left: 0; top: 0; bottom: 0; opacity: 1; z-index: 1; transition: width 0.5s ease-out; }
 .h-content { position: relative; z-index: 2; padding: 0 12px; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; }
 .h-left { display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden; white-space: nowrap; }
@@ -136,13 +143,25 @@ input[type="radio"], input[type="checkbox"] { width: 16px; height: 16px; margin:
 .del-btn-icon { background: transparent; border: none; font-size: 14px; cursor: pointer; padding: 4px; opacity: 0.5; transition: 0.2s; width: 28px; text-align: center; }
 .del-btn-icon:hover { opacity: 1; color: #ef4444; }
 
+/* 鑑定評價文字顏色 */
 .title-god { color: #16a34a; font-weight: bold; }
 .title-lucky { color: #4ade80; font-weight: bold; }
 .title-plain { color: #facc15; font-weight: bold; }
 .title-unlucky { color: #fb923c; font-weight: bold; }
 .title-bad { color: #dc2626; font-weight: bold; }
 
-.h-luck { font-size: 12px; font-weight: normal; padding: 4px 0; border-radius: 6px; width: 85px; text-align: center; box-sizing: border-box; }
-.h-luck.luck-high { background-color: rgba(0, 0, 0, 0.3); color: #ffffff; }
-[data-theme="light"] .h-luck.luck-high { background-color: rgba(240, 240, 240, 0.5); color: #ffffff; }
-[data-theme="light"] .h-luck.luck-black-light { color: #0f172a !important; }
+.h-luck { font-size: 12px; font-weight: normal; padding: 4px 0; border-radius: 6px; width: 85px; text-align: center; box-sizing: border-box; transition: background 0.3s; }
+.h-luck.luck-high { background-color: rgba(0, 0, 0, 0.4); color: #ffffff; }
+
+/* 修復 Issue 10: luck-black-light 的顏色問題 */
+.h-luck.luck-black-light { 
+    color: var(--luck-black-text) !important; 
+    text-shadow: 0 0 2px rgba(0,0,0,0.5);
+}
+
+[data-theme="light"] .h-luck.luck-high { background-color: rgba(0, 0, 0, 0.1); color: #0f172a; }
+[data-theme="light"] .h-luck.luck-black-light { color: #0f172a !important; text-shadow: none; }
+"""
+
+with open("style-v2.css", "w", encoding="utf-8") as f:
+    f.write(css_content)
