@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════
-//  app.js — 戀與深空抽卡分析器 (修復墊抽數異常與 70 抽強制覆蓋 Bug)
+//  app.js — 戀與深空抽卡分析器 (支援常駐池獨立計算與三欄排版)
 // ════════════════════════════════════════════════════════════
 
 const leadIcons = { '祁煜': '🐟', '沈星回': '🌟', '黎深': '🍐', '秦徹': '🚘', '夏以晝': '🍎' };
@@ -68,8 +68,20 @@ function parseEventTime(e) {
 }
 
 function updateBannerRecommendations() {
-    if (typeof eventCards === 'undefined') return;
     const mainPool = document.querySelector('input[name="mainPool"]:checked').value;
+    const subPoolGroup = document.getElementById('subPoolGroup');
+    
+    // 常駐池沒有副池分類與活動列表
+    if (mainPool === '常駐') {
+        if(subPoolGroup) subPoolGroup.style.opacity = '0.3';
+        dropdownData.bannerName = ['極空迴音'];
+        dropdownData.upCardName = typeof standardCards !== 'undefined' ? [...new Set(Object.values(standardCards).flat())] : [];
+        document.getElementById('bannerName').value = '極空迴音';
+        return;
+    }
+    
+    if(subPoolGroup) subPoolGroup.style.opacity = '1';
+    if (typeof eventCards === 'undefined') return;
     const subPool  = document.querySelector('input[name="subPool"]:checked').value;
 
     const filteredEvents = eventCards.filter(e => {
@@ -156,6 +168,8 @@ window.autoFillFromUpCard = function () {
     const upCardName = document.getElementById('upCardName').value;
     if (!upCardName || typeof eventCards === 'undefined') return;
     const currentMainPool = document.querySelector('input[name="mainPool"]:checked').value;
+    if (currentMainPool === '常駐') return; // 常駐不適用反查限定活動
+    
     const matchingEvents = eventCards.filter(e => Object.values(e.cards).some(cards => cards.includes(upCardName)));
     if (matchingEvents.length > 0) {
         const best = matchingEvents.find(e =>
@@ -169,6 +183,8 @@ window.autoFillFromUpCard = function () {
 
 window.autoFillBannerInfo = function (forcedEvent = null) {
     const bannerName = document.getElementById('bannerName').value;
+    if (bannerName === '極空迴音') return;
+    
     const event = forcedEvent || findEvent(bannerName, document.querySelector('input[name="mainPool"]:checked').value);
     if (event) {
         const isRerun = event.poolType.includes('復刻');
@@ -184,7 +200,7 @@ window.updatePulledCardList = function () {
     const bannerName = document.getElementById('bannerName').value;
     const pulledLead = document.querySelector('input[name="pulledLead"]:checked').value;
     let options = [];
-    if (bannerName && typeof eventCards !== 'undefined') {
+    if (bannerName && bannerName !== '極空迴音' && typeof eventCards !== 'undefined') {
         const event = findEvent(bannerName, document.querySelector('input[name="mainPool"]:checked').value);
         if (event?.cards?.[pulledLead]) options.push(...event.cards[pulledLead]);
     }
@@ -192,15 +208,16 @@ window.updatePulledCardList = function () {
     dropdownData.cardName = [...new Set(options)];
 };
 
-window.autoFillFromOCR = function (pulls, cardName, latestTime, pendingPulls) {
+// 💡 修正點：加入 rawText 參數，從原始文字辨識是否為極空迴音
+window.autoFillFromOCR = function (pulls, cardName, latestTime, pendingPulls, rawText = '') {
     window.currentPendingPulls = pendingPulls || 0;
     document.getElementById('pulls').value = pulls;
     if (!cardName || cardName === '未知' || cardName.includes('未知卡名')) return;
     document.getElementById('cardName').value = cardName;
 
     let foundLead = findTrueLead(cardName);
-
     let matchedEvent = null;
+    
     if (typeof eventCards !== 'undefined') {
         const possibleEvents = eventCards.filter(ev => Object.values(ev.cards).some(c => c.includes(cardName)));
         if (possibleEvents.length > 0) {
@@ -211,7 +228,11 @@ window.autoFillFromOCR = function (pulls, cardName, latestTime, pendingPulls) {
         }
     }
 
-    if (matchedEvent) {
+    // 💡 修正邏輯：明確偵測到「極空迴音」四字才切為常駐池
+    if (rawText.includes('極空迴音')) {
+        document.querySelector(`input[name="mainPool"][value="常駐"]`).checked = true;
+        document.getElementById('bannerName').value = '極空迴音';
+    } else if (matchedEvent) {
         const isRerun = matchedEvent.poolType.includes('復刻');
         document.querySelector(`input[name="mainPool"][value="${isRerun ? '復刻' : '限定'}"]`).checked = true;
         if (matchedEvent.poolType.includes('混池'))      document.querySelector('input[name="subPool"][value="混池"]').checked = true;
@@ -230,7 +251,16 @@ window.autoFillFromOCR = function (pulls, cardName, latestTime, pendingPulls) {
         if (radio) radio.checked = true;
     }
 
-    // 💡 [修正] 移除原本 OCR 會直接覆蓋 p_lim 的錯誤邏輯，避免干擾真正的歷史累加
+    const mainPoolValue = document.querySelector('input[name="mainPool"]:checked').value;
+    const poolKey = mainPoolValue === '限定' ? 'lim' : (mainPoolValue === '復刻' ? 're' : 'std');
+    
+    let progress = window.currentPendingPulls;
+    if (poolKey !== 'std') {
+        const isUpCard = !!(matchedEvent && foundLead && matchedEvent.cards[foundLead]?.includes(cardName));
+        progress = isUpCard ? window.currentPendingPulls : (70 + window.currentPendingPulls);
+    }
+    setP(poolKey, progress);
+
     onPoolChange();
 };
 
@@ -251,7 +281,8 @@ const judgeT = (p) =>
 
 // ── 手動修改已墊抽數 ───────────────────────────────────────
 function editPending(type) {
-    const v = prompt('手動修改『已墊抽數』\n(請輸入您目前已經墊了幾抽，0~139)：', getP(type));
+    const max = type === 'std' ? 69 : 139;
+    const v = prompt(`手動修改『已墊抽數』\n(請輸入您目前已經墊了幾抽，0~${max})：`, getP(type));
     if (v !== null && !isNaN(parseInt(v))) setP(type, parseInt(v));
 }
 
@@ -271,22 +302,26 @@ function addRecord() {
     const isUpCard = !!(event && card && event.cards[pulledLead]?.includes(card));
     const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
 
-    const judgeResult = isUpCard
-        ? (sub === '混池' && oshis.length > 0 && !oshis.includes(pulledLead) ? 'wai_lim' : 'target')
-        : 'wai_std';
+    let judgeResult;
+    if (main === '常駐') {
+        judgeResult = 'std'; // 常駐專屬標記
+    } else {
+        judgeResult = isUpCard
+            ? (sub === '混池' && oshis.length > 0 && !oshis.includes(pulledLead) ? 'wai_lim' : 'target')
+            : 'wai_std';
+    }
 
-    const poolKey  = main === '限定' ? 'lim' : 're';
+    const poolKey  = main === '限定' ? 'lim' : (main === '復刻' ? 're' : 'std');
     const currentP = getP(poolKey);
 
     const rec = { id: Date.now(), main, sub, lead: pulledLead, banner, card, pulls, res: judgeResult };
 
-    if (judgeResult === 'target') {
+    if (judgeResult === 'target' || judgeResult === 'std') {
         rec.total = currentP + pulls;
-        _setP(poolKey, window.currentPendingPulls); // 出 UP 後，如果有剩餘未出金的墊抽數才加上去
+        _setP(poolKey, window.currentPendingPulls); // 目標達成或常駐出金，皆清空墊子
     } else {
         rec.total = pulls;
-        // 💡 [修正] 移除原本「常駐卡強制變70抽」的錯誤邏輯，老老實實累積實際抽數
-        _setP(poolKey, currentP + pulls); 
+        _setP(poolKey, currentP + pulls); // 歪卡繼續累積
     }
 
     window.currentPendingPulls = 0;
@@ -303,7 +338,6 @@ function deleteRec(id) {
     const rec = db.find(r => r.id === id);
     if (!rec) return;
 
-    // 💡 [修正] 新增防呆提醒，避免刪除後墊抽數錯亂
     if (confirm(`確定刪除 ${rec.card} (${rec.pulls}抽) 嗎？\n\n⚠️ 注意：系統不會自動扣除右上角的「已墊抽數」。\n如果您要重新輸入這筆資料，請務必手動點擊右上角 ✏️，將墊抽數字改回正確的狀態（或歸零），否則抽數會被重複疊加！`)) { 
         setDB(db.filter(r => r.id !== id)); 
         renderUI(); 
@@ -315,28 +349,40 @@ function clearAll() {
         localStorage.removeItem('db_v4');
         _setP('lim', 0);
         _setP('re', 0);
+        _setP('std', 0);
         window.currentPendingPulls = 0;
         renderUI();
     }
 }
 
-// ── 統計面板 ───────────────────────────────────────────────
+// ── 三欄式統計面板 ─────────────────────────────────────────
 function updateLuckStats(db = getDB()) {
-    const totalPulls = db.reduce((sum, r) => sum + r.pulls, 0);
-    document.getElementById('statTotalPulls').innerText = totalPulls;
+    // 1. 限定池數據
+    const limPulls = db.filter(r => r.main === '限定');
+    const limTotal = limPulls.reduce((sum, r) => sum + r.pulls, 0);
+    const limUp = limPulls.filter(r => r.res === 'target');
+    const limWai = limPulls.filter(r => r.res.startsWith('wai'));
+    document.getElementById('statLimPulls').innerText = limTotal;
+    document.getElementById('statLimCount').innerText = `${limUp.length}/${limWai.length}`;
+    document.getElementById('statLimAvg').innerText = limUp.length > 0 ? (limUp.reduce((s, r) => s + r.total, 0) / limUp.length).toFixed(1) : '0.0';
 
-    const diamondEl = document.getElementById('statTotalDiamonds');
-    if (diamondEl) diamondEl.innerText = `(${(totalPulls * 150).toLocaleString()} 鑽)`;
+    // 2. 常駐池數據
+    const stdPulls = db.filter(r => r.main === '常駐');
+    const stdTotal = stdPulls.reduce((sum, r) => sum + r.pulls, 0);
+    document.getElementById('statStdPulls').innerText = stdTotal;
+    document.getElementById('statStdCount').innerText = stdPulls.length;
+    document.getElementById('statStdAvg').innerText = stdPulls.length > 0 ? (stdPulls.reduce((s, r) => s + r.total, 0) / stdPulls.length).toFixed(1) : '0.0';
 
-    document.getElementById('statAvgFiveStar').innerText =
-        db.length > 0 ? (totalPulls / db.length).toFixed(1) : '0.0';
+    // 3. 復刻池數據
+    const rePulls = db.filter(r => r.main === '復刻');
+    const reTotal = rePulls.reduce((sum, r) => sum + r.pulls, 0);
+    const reUp = rePulls.filter(r => r.res === 'target');
+    const reWai = rePulls.filter(r => r.res.startsWith('wai'));
+    document.getElementById('statRePulls').innerText = reTotal;
+    document.getElementById('statReCount').innerText = `${reUp.length}/${reWai.length}`;
+    document.getElementById('statReAvg').innerText = reUp.length > 0 ? (reUp.reduce((s, r) => s + r.total, 0) / reUp.length).toFixed(1) : '0.0';
 
-    const targetsOnly = db.filter(r => r.res === 'target');
-    document.getElementById('statAvgLimited').innerText =
-        targetsOnly.length > 0
-            ? (targetsOnly.reduce((sum, r) => sum + r.total, 0) / targetsOnly.length).toFixed(1)
-            : '0.0';
-
+    // 4. 體質鑑定區 (只判定限定/復刻的目標卡)
     const mainF = document.getElementById('mainPoolLuckSelect').value;
     const subF  = document.getElementById('subPoolLuckSelect').value;
 
@@ -368,6 +414,7 @@ function updateLuckStats(db = getDB()) {
 
 // ── 工具函式 ───────────────────────────────────────────────
 function getEventDate(eventName, mainPool) {
+    if (mainPool === '常駐') return 0;
     const target = findEvent(eventName, mainPool);
     return target ? parseEventTime(target) : 0;
 }
@@ -386,13 +433,14 @@ function migrateDB() {
 function renderUI() {
     document.getElementById('pLim').innerText = 140 - getP('lim');
     document.getElementById('pRe').innerText  = 140 - getP('re');
+    document.getElementById('pStd').innerText = 70 - getP('std');
 
     const db    = getDB();
     const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
 
     let dbChanged = false;
     db.forEach(r => {
-        if (r.card && r.card !== '未知') {
+        if (r.card && r.card !== '未知' && r.main !== '常駐') {
             const trueLead = findTrueLead(r.card);
             if (trueLead) {
                 if (r.lead !== trueLead) { r.lead = trueLead; dbChanged = true; }
@@ -408,7 +456,11 @@ function renderUI() {
         r._evTime      = evTime;
         r._sortTime    = evTime || r.id;
         r._entryOrder  = r.id;
-        r.luck         = (r.res === 'target') ? judgeT(r.total) : judgeS(r.pulls);
+        
+        // 常駐池依據其花費的總抽數計算體質 (以 70 抽為限)
+        if (r.res === 'target') r.luck = judgeT(r.total);
+        else if (r.main === '常駐') r.luck = judgeS(r.total);
+        else r.luck = judgeS(r.pulls);
     });
 
     if (dbChanged) setDB(db);
@@ -447,14 +499,15 @@ function renderUI() {
 
     document.getElementById('recordList').innerHTML = displayDb.map(r => {
         let cardTypeStr, statusColor;
-        if      (r.res === 'target')  { cardTypeStr = '🎯 限定'; statusColor = 'var(--primary)'; }
+        if      (r.main === '常駐')   { cardTypeStr = '🎫 常駐'; statusColor = '#3b82f6'; }
+        else if (r.res === 'target')  { cardTypeStr = '🎯 限定'; statusColor = 'var(--primary)'; }
         else if (r.res === 'wai_lim') { cardTypeStr = '💔 限定'; statusColor = '#ef4444'; }
-        else                          { cardTypeStr = '☠️ 常駐'; statusColor = '#475569'; }
+        else                          { cardTypeStr = '☠️ 歪卡'; statusColor = '#475569'; }
 
         const d       = new Date(r._evTime || r.id);
-        const dateStr = r._evTime
+        const dateStr = r._evTime && r.main !== '常駐'
             ? `[${d.getFullYear().toString().slice(2)}/${(d.getMonth() + 1).toString().padStart(2, '0')}]`
-            : '[未知]';
+            : '[無期效]';
         const isBlack = r.pulls > 55 && r.pulls <= 62 && r.luck.s <= 1;
 
         return `
