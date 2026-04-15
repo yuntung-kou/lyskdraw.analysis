@@ -1,20 +1,16 @@
-/* ════════════════════════════════════════════
-   CSS 變數（色盤）
-   深色模式為預設；[data-theme="light"] 覆蓋淺色版本
-   ════════════════════════════════════════════ */
 :root {
     --bg-color: #0f172a;
     --card-bg: #1e293b;
     --input-bg: #0f172a;
-    --primary: #8b5cf6;         /* 主色：紫色 */
+    --primary: #8b5cf6;
     --primary-hover: #7c3aed;
     --text-main: #f8fafc;
     --text-sub: #cbd5e1;
     --border: #334155;
-    --limited-color: #3b82f6;   /* 限定標籤：藍色 */
-    --rerun-color: #ec4899;     /* 復刻標籤：粉色 */
-    --oshi-color: #ec4899;      /* 主推面板：粉色 */
-    --title-color: #c4b5fd;     /* 標題與 OCR 區塊：淺紫色 */
+    --limited-color: #3b82f6;
+    --rerun-color: #ec4899;
+    --oshi-color: #ec4899;
+    --title-color: #c4b5fd;
 }
 
 [data-theme="light"] {
@@ -24,16 +20,13 @@
     --text-main: #0f172a;
     --text-sub: #475569;
     --border: #e2e8f0;
-    --primary: #db2777;         /* 淺色模式主色改深粉色 */
+    --primary: #db2777;
     --primary-hover: #be185d;
-    --rerun-color: #a855f7;     /* 淺色模式復刻改淺紫色 */
+    --rerun-color: #a855f7;
     --oshi-color: #a855f7;
     --title-color: #db2777;
 }
 
-/* ════════════════════════════════════════════
-   基礎版面
-   ════════════════════════════════════════════ */
 body {
     font-family: 'Segoe UI', sans-serif;
     background-color: var(--bg-color);
@@ -57,350 +50,95 @@ body {
     box-sizing: border-box;
 }
 
-/* ════════════════════════════════════════════
-   標題列
-   ════════════════════════════════════════════ */
-.header-section {
-    position: relative;
-    text-align: center;
-    margin-bottom: 25px;
-}
-h1 {
-    color: var(--title-color);
-    margin: 0;
-    font-size: 24px;
-}
-.theme-btn {
-    position: absolute;
-    right: 0;
-    top: 0;
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    padding: 0;
-}
-p.subtitle {
-    color: var(--text-sub);
-    font-size: 13px;
-    margin: 6px 0 0 0;
-}
+.header-section { position: relative; text-align: center; margin-bottom: 25px; }
+h1 { color: var(--title-color); margin: 0; font-size: 24px; }
+.theme-btn { position: absolute; right: 0; top: 0; background: none; border: none; font-size: 20px; cursor: pointer; padding: 0; }
+p.subtitle { color: var(--text-sub); font-size: 13px; margin: 6px 0 0 0; }
 
-/* ════════════════════════════════════════════
-   主佈局與響應式雙欄 (Responsive Layout)
-   ════════════════════════════════════════════ */
-.main-layout {
-    display: flex;
-    flex-direction: column; /* 手機版預設：上下排列 */
-    gap: 25px;
-}
+.main-layout { display: flex; flex-direction: column; gap: 25px; }
 
-/* 當螢幕寬度大於 850px (電腦或橫向平板) 時，切換為左右雙欄 */
 @media (min-width: 850px) {
-    .main-layout {
-        flex-direction: row;
-        align-items: flex-start;
-    }
-    .left-col {
-        flex: 0 0 380px; /* 左側表單固定寬度 */
-    }
-    .right-col {
-        flex: 1; /* 右側圖表佔據剩餘空間 */
-        min-width: 0; /* 防止超出邊界 */
-    }
-    .right-col .section-header:first-child {
-        margin-top: 0; /* 移除右欄第一個標題的上方間距，對齊左欄 */
-    }
+    .main-layout { flex-direction: row; align-items: flex-start; }
+    .left-col { flex: 0 0 380px; }
+    .right-col { flex: 1; min-width: 0; }
+    .right-col .section-header:first-child { margin-top: 0; }
 }
 
-/* ════════════════════════════════════════════
-   主推面板
-   ════════════════════════════════════════════ */
-.oshi-box {
-    background: rgba(139, 92, 246, 0.05);
-    padding: 12px;
-    border-radius: 8px;
-    border: 1px dashed var(--oshi-color);
-    margin-bottom: 16px;
-}
-.oshi-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.oshi-header label {
-    color: var(--oshi-color);
-    margin: 0;
-    font-size: 13px;
-    font-weight: bold;
-}
+.oshi-box { background: rgba(139, 92, 246, 0.05); padding: 12px; border-radius: 8px; border: 1px dashed var(--oshi-color); margin-bottom: 16px; }
+.oshi-header { display: flex; justify-content: space-between; align-items: center; }
+.oshi-header label { color: var(--oshi-color); margin: 0; font-size: 13px; font-weight: bold; }
 
-/* ════════════════════════════════════════════
-   墊池面板
-   ════════════════════════════════════════════ */
-.pending-board {
-    display: flex;
-    justify-content: space-between;
-    background: var(--input-bg);
-    padding: 12px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    margin-bottom: 15px; 
-    font-size: 12px;
-    font-weight: bold;
-}
-.pending-item {
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 6px;
-    transition: 0.2s;
-    flex: 1;
-    text-align: center;
-}
+.pending-board { display: flex; justify-content: space-between; background: var(--input-bg); padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 15px; font-size: 12px; font-weight: bold; }
+.pending-item { cursor: pointer; padding: 4px; border-radius: 6px; transition: 0.2s; flex: 1; text-align: center; }
 .pending-item:hover { background: rgba(139, 92, 246, 0.05); }
 .pending-item span { font-size: 16px; color: var(--text-main); display: block; margin-top: 4px; }
 .pending-lim { color: var(--limited-color); border-right: 1px solid var(--border); }
 .pending-re  { color: var(--rerun-color); }
 
-/* ════════════════════════════════════════════
-   表單元素
-   ════════════════════════════════════════════ */
+.stats-board { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 15px; }
+.stat-card { background: var(--input-bg); padding: 12px 6px; border-radius: 8px; border: 1px solid var(--border); flex: 1; text-align: center; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.stat-title { font-size: 12px; color: var(--text-sub); margin-bottom: 6px; font-weight: bold; }
+.stat-value { font-size: 18px; font-weight: bold; color: var(--primary); }
+
 .form-group { margin-bottom: 16px; }
-
-label.group-label {
-    display: block;
-    margin-bottom: 6px;
-    font-size: 13px;
-    color: var(--text-sub);
-    font-weight: bold;
-}
-
-input[type="text"],
-input[type="number"] {
-    width: 100%;
-    padding: 10px;
-    background-color: var(--input-bg);
-    border: 1px solid var(--border);
-    color: var(--text-main);
-    border-radius: 8px;
-    box-sizing: border-box;
-    font-size: 14px;
-}
+label.group-label { display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-sub); font-weight: bold; }
+input[type="text"], input[type="number"] { width: 100%; padding: 10px; background-color: var(--input-bg); border: 1px solid var(--border); color: var(--text-main); border-radius: 8px; box-sizing: border-box; font-size: 14px; }
 input::-webkit-calendar-picker-indicator { display: none !important; }
 
-/* radio / checkbox 群組 */
 .radio-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-.radio-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    font-size: 12px;
-    background: var(--input-bg);
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    transition: 0.2s;
-}
+.radio-label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; background: var(--input-bg); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); transition: 0.2s; }
 .radio-label:hover { border-color: var(--primary); background: rgba(139, 92, 246, 0.1); }
-
-input[type="radio"],
-input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var(--primary); cursor: pointer; }
-
-/* 主推 checkbox 專用樣式 */
+input[type="radio"], input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var(--primary); cursor: pointer; }
 .oshi-label input[type="checkbox"] { accent-color: var(--oshi-color); }
 .oshi-label:hover { border-color: var(--oshi-color); background: rgba(139, 92, 246, 0.05); }
 
-/* 主要送出按鈕 */
-.main-btn {
-    width: 100%;
-    padding: 12px;
-    background-color: var(--primary);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: bold;
-    cursor: pointer;
-    margin-top: 10px;
-    transition: 0.3s;
-}
+.main-btn { width: 100%; padding: 12px; background-color: var(--primary); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
 .main-btn:hover { background-color: var(--primary-hover); }
 
-/* ════════════════════════════════════════════
-   自動完成下拉選單
-   ════════════════════════════════════════════ */
 .autocomplete-wrapper { position: relative; flex: 1; }
-.autocomplete-list {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0; right: 0;
-    background-color: var(--input-bg);
-    border: 1px solid var(--primary);
-    max-height: 200px;
-    overflow-y: auto;
-    z-index: 100;
-    border-radius: 8px;
-    display: none;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-}
-.autocomplete-item {
-    padding: 10px 12px;
-    cursor: pointer;
-    color: var(--text-main);
-    border-bottom: 1px solid var(--border);
-    font-size: 13px;
-}
+.autocomplete-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background-color: var(--input-bg); border: 1px solid var(--primary); max-height: 200px; overflow-y: auto; z-index: 100; border-radius: 8px; display: none; box-shadow: 0 8px 16px rgba(0,0,0,0.2); }
+.autocomplete-item { padding: 10px 12px; cursor: pointer; color: var(--text-main); border-bottom: 1px solid var(--border); font-size: 13px; }
 .autocomplete-item:last-child { border-bottom: none; }
 .autocomplete-item:hover { background: rgba(139, 92, 246, 0.1); color: var(--primary); }
 
-/* ════════════════════════════════════════════
-   OCR 區塊
-   ════════════════════════════════════════════ */
-.ocr-box {
-    background: rgba(139, 92, 246, 0.05);
-    padding: 12px;
-    border-radius: 8px;
-    border: 1px dashed var(--title-color);
-    margin-bottom: 20px;
-}
+.ocr-box { background: rgba(139, 92, 246, 0.05); padding: 12px; border-radius: 8px; border: 1px dashed var(--title-color); margin-bottom: 20px; }
 [data-theme="light"] .ocr-box { background: rgba(219, 39, 119, 0.05); }
 
-/* ════════════════════════════════════════════
-   統計面板
-   ════════════════════════════════════════════ */
-.section-header {
-    font-size: 16px;
-    border-bottom: 2px solid var(--border);
-    padding-bottom: 8px;
-    margin-bottom: 12px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 25px;
-}
+.section-header { font-size: 16px; border-bottom: 2px solid var(--border); padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; margin-top: 25px; }
 .overall-luck-board { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-.luck-card {
-    background: var(--input-bg);
-    padding: 12px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-/* 體質選擇下拉 */
-.luck-select {
-    width: 100%;
-    padding: 10px;
-    background-color: var(--input-bg);
-    border: 1px solid var(--border);
-    color: var(--text-main);
-    border-radius: 8px;
-    box-sizing: border-box;
-    font-size: 14px;
-    font-weight: bold;
-    outline: none;
-    cursor: pointer;
-    margin-bottom: 12px;
-    appearance: none;
-    -webkit-appearance: none;
-    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%238b5cf6%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-    background-size: 16px;
-}
-[data-theme="light"] .luck-select {
-    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23db2777%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
-}
+.luck-card { background: var(--input-bg); padding: 12px; border-radius: 8px; border: 1px solid var(--border); text-align: center; display: flex; flex-direction: column; align-items: center; }
+.luck-select { width: 100%; padding: 10px; background-color: var(--input-bg); border: 1px solid var(--border); color: var(--text-main); border-radius: 8px; box-sizing: border-box; font-size: 14px; font-weight: bold; outline: none; cursor: pointer; margin-bottom: 12px; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%238b5cf6%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E"); background-repeat: no-repeat; background-position: right 10px center; background-size: 16px; }
+[data-theme="light"] .luck-select { background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23db2777%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E"); }
 .luck-select option { background: var(--card-bg); color: var(--text-main); font-weight: normal; }
 
-/* ════════════════════════════════════════════
-   巔峰榜
-   ════════════════════════════════════════════ */
-.peak-board {
-    background: linear-gradient(135deg, var(--card-bg) 0%, var(--input-bg) 100%);
-    padding: 12px;
-    border-radius: 8px;
-    border: 1px solid #4ade8055;
-    margin-bottom: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
+.peak-board { background: linear-gradient(135deg, var(--card-bg) 0%, var(--input-bg) 100%); padding: 12px; border-radius: 8px; border: 1px solid #4ade8055; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
 .peak-item { display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; }
-.peak-label-best  { color: #4ade80; }
+.peak-label-best { color: #4ade80; }
 .peak-label-spook { color: #ef4444; }
 
-/* ════════════════════════════════════════════
-   紀錄橫向長條圖卡片
-   ════════════════════════════════════════════ */
-.h-record-card {
-    position: relative;
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    margin-bottom: 8px;
-    overflow: hidden;
-    display: flex;
-    height: 48px;
-}
-.h-bar-bg {
-    position: absolute; left: 0; top: 0; bottom: 0; opacity: 1; z-index: 1; transition: width 0.5s ease-out;
-}
-.h-content {
-    position: relative; z-index: 2; padding: 0 12px; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box;
-}
+.h-record-card { position: relative; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; overflow: hidden; display: flex; height: 48px; }
+.h-bar-bg { position: absolute; left: 0; top: 0; bottom: 0; opacity: 1; z-index: 1; transition: width 0.5s ease-out; }
+.h-content { position: relative; z-index: 2; padding: 0 12px; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; }
 .h-left { display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden; white-space: nowrap; }
 .h-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .h-date { font-size: 12px; color: var(--text-main); font-family: monospace; }
 .h-tags { display: flex; gap: 4px; align-items: center; }
-.tag {
-    padding: 0 6px; height: 20px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 11px; color: white; font-weight: bold; box-sizing: border-box; white-space: nowrap;
-}
+.tag { padding: 0 6px; height: 20px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 11px; color: white; font-weight: bold; box-sizing: border-box; white-space: nowrap; }
 .tag-lim { background: var(--limited-color); }
-.tag-re  { background: var(--rerun-color); }
+.tag-re { background: var(--rerun-color); }
 .h-title { display: flex; align-items: baseline; gap: 6px; }
 .h-pulls { font-size: 12px; color: var(--text-main); display: flex; align-items: baseline; justify-content: flex-end; width: 45px; gap: 3px; }
 .pull-num { font-size: 18px; font-weight: bold; }
 .del-btn-icon { background: transparent; border: none; font-size: 14px; cursor: pointer; padding: 4px; opacity: 0.5; transition: 0.2s; width: 28px; text-align: center; }
 .del-btn-icon:hover { opacity: 1; color: #ef4444; }
 
-/* 體質稱號文字顏色 */
-.title-god     { color: #16a34a; font-weight: bold; }
-.title-lucky   { color: #4ade80; font-weight: bold; }
-.title-plain   { color: #facc15; font-weight: bold; }
+.title-god { color: #16a34a; font-weight: bold; }
+.title-lucky { color: #4ade80; font-weight: bold; }
+.title-plain { color: #facc15; font-weight: bold; }
 .title-unlucky { color: #fb923c; font-weight: bold; }
-.title-bad     { color: #dc2626; font-weight: bold; }
+.title-bad { color: #dc2626; font-weight: bold; }
 
-/* ════════════════════════════════════════════
-   💡 體質標籤特定樣式 (> 55 抽的專屬設定)
-   ════════════════════════════════════════════ */
-.h-luck {
-    font-size: 12px;
-    font-weight: normal;
-    padding: 4px 0;
-    border-radius: 6px;
-    width: 85px;
-    text-align: center;
-    box-sizing: border-box;
-}
-
-/* 深色模式：大於 55 抽的預設樣式 (半透明黑底，純白字) */
-.h-luck.luck-high {
-    background-color: rgba(0, 0, 0, 0.3);
-    color: #ffffff;
-}
-
-/* 淺色模式：大於 55 抽的特製樣式 (#F0F0F0 50% 透明度) */
-[data-theme="light"] .h-luck.luck-high {
-    background-color: rgba(240, 240, 240, 0.5); 
-    color: #ffffff;
-}
-
-/* 💡 淺色模式特定條件：字體改為深黑色（覆蓋前面所有的白字設定） */
-[data-theme="light"] .h-luck.luck-black-light {
-    color: #0f172a !important; 
-}
+.h-luck { font-size: 12px; font-weight: normal; padding: 4px 0; border-radius: 6px; width: 85px; text-align: center; box-sizing: border-box; }
+.h-luck.luck-high { background-color: rgba(0, 0, 0, 0.3); color: #ffffff; }
+[data-theme="light"] .h-luck.luck-high { background-color: rgba(240, 240, 240, 0.5); color: #ffffff; }
+[data-theme="light"] .h-luck.luck-black-light { color: #0f172a !important; }
