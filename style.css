@@ -1,16 +1,20 @@
+/* ════════════════════════════════════════════
+   CSS 變數（色盤）
+   深色模式為預設；[data-theme="light"] 覆蓋淺色版本
+   ════════════════════════════════════════════ */
 :root {
     --bg-color: #0f172a;
     --card-bg: #1e293b;
     --input-bg: #0f172a;
-    --primary: #8b5cf6;
-    --primary-hover: #7c3aed;
+    --primary: #a78bfa;         /* 🌟 主色：從深紫改為淺紫色 */
+    --primary-hover: #8b5cf6;   /* 🌟 滑鼠懸停顏色 */
     --text-main: #f8fafc;
     --text-sub: #cbd5e1;
     --border: #334155;
-    --limited-color: #3b82f6;
-    --rerun-color: #ec4899;
-    --oshi-color: #ec4899;
-    --title-color: #c4b5fd;
+    --limited-color: #3b82f6;   
+    --rerun-color: #ec4899;     
+    --oshi-color: #ec4899;      
+    --title-color: #ddd6fe;     /* 🌟 標題與 OCR 區塊：調成更亮一點的淺紫 */
 }
 
 [data-theme="light"] {
