@@ -159,7 +159,6 @@ window.updatePulledCardList = function() {
 
 // 🌟 OCR 全自動填寫與保底邏輯運算
 window.autoFillFromOCR = function(pulls, cardName, latestTime, pendingPulls) {
-    // 記錄已經墊的抽數，讓後續 addRecord 不會洗掉進度
     window.currentPendingPulls = pendingPulls || 0;
 
     document.getElementById('pulls').value = pulls;
@@ -172,21 +171,17 @@ window.autoFillFromOCR = function(pulls, cardName, latestTime, pendingPulls) {
 
     let matchedEvent = null;
     if (typeof eventCards !== 'undefined') {
-        // 先找出所有包含這張限定卡的卡池
         let possibleEvents = eventCards.filter(ev => Object.values(ev.cards).some(c => c.includes(cardName)));
 
         if (possibleEvents.length > 0) {
-            // 用截圖時間找出精準年份
             const year = latestTime ? new Date(latestTime).getFullYear().toString() : null;
             matchedEvent = possibleEvents.find(ev => ev.year === year) || possibleEvents[0];
         } else if (latestTime) {
-            // 如果這張卡是常駐卡，用截圖時間反推當下的卡池
             matchedEvent = eventCards.slice().reverse().find(ev => parseEventTime(ev) <= latestTime);
         }
     }
 
     if (matchedEvent) {
-        // 自動切換卡池類型
         const isRerun = matchedEvent.poolType.includes('復刻');
         document.querySelector(`input[name="mainPool"][value="${isRerun ? '復刻' : '限定'}"]`).checked = true;
         
@@ -194,11 +189,9 @@ window.autoFillFromOCR = function(pulls, cardName, latestTime, pendingPulls) {
         else if (matchedEvent.poolType.includes('日卡')) document.querySelector('input[name="subPool"][value="日卡"]').checked = true;
         else document.querySelector('input[name="subPool"][value="單人"]').checked = true;
         
-        // 自動帶入卡池名稱
         document.getElementById('bannerName').value = matchedEvent.eventName;
     }
 
-    // 自動切換男主 Icon
     if (!foundLead && matchedEvent) {
         for (const lead in matchedEvent.cards) { if (matchedEvent.cards[lead].includes(cardName)) { foundLead = lead; break; } }
     }
@@ -207,12 +200,10 @@ window.autoFillFromOCR = function(pulls, cardName, latestTime, pendingPulls) {
         if (radio) radio.checked = true;
     }
 
-    // 🌟 數學公式更新：若 最新五星=常駐卡，則70-已抽，else (非常駐=限定)，則140-已抽
     const poolKey = (matchedEvent?.poolType.includes('復刻')) ? 're' : 'lim';
     let isUpCard = false;
     if (matchedEvent && foundLead) isUpCard = matchedEvent.cards[foundLead]?.includes(cardName);
     
-    // progress 代表從上次歸零後累積的抽數
     const progress = isUpCard ? window.currentPendingPulls : (70 + window.currentPendingPulls);
     setP(poolKey, progress);
 
@@ -250,7 +241,6 @@ function addRecord() {
 
     if (judgeResult === 'target') {
         rec.total = currentP + pulls; rec.luck = judgeT(rec.total);
-        // 保留 OCR 讀到的待判定抽數
         _setP(poolKey, window.currentPendingPulls); 
     } else {
         rec.total = pulls; rec.luck = judgeS(pulls);
@@ -258,7 +248,6 @@ function addRecord() {
         _setP(poolKey, isStandard ? (70 + window.currentPendingPulls) : (currentP + pulls));
     }
 
-    // 消耗完後歸零，避免手動輸入時干擾
     window.currentPendingPulls = 0; 
 
     let db = getDB(); db.push(rec); setDB(db);
@@ -275,17 +264,20 @@ function updateLuckStats() {
     // --- 1. 計算基本統計數據 ---
     const totalPulls = db.reduce((sum, r) => sum + r.pulls, 0);
     document.getElementById('statTotalPulls').innerText = totalPulls;
-    
-    // 💎 新增：計算並顯示等值的鑽石數量 (總抽數 x 150)
-    const totalDiamonds = totalPulls * 150;
-    // 使用 toLocaleString() 加上千位數逗號，例如會顯示 (10,200 鑽)
-    document.getElementById('statTotalDiamonds').innerText = `(${totalDiamonds.toLocaleString()} 鑽)`;
 
-    // 平均出五星
+    // 💎 計算並顯示等值的鑽石數量 (總抽數 x 150)
+    const totalDiamonds = totalPulls * 150;
+    // 防呆檢查：確保 HTML 元素存在才更新
+    const diamondEl = document.getElementById('statTotalDiamonds');
+    if (diamondEl) {
+        diamondEl.innerText = `(${totalDiamonds.toLocaleString()} 鑽)`;
+    }
+
+    // 計算平均出五星
     const avgFiveStar = db.length > 0 ? (totalPulls / db.length).toFixed(1) : '0.0';
     document.getElementById('statAvgFiveStar').innerText = avgFiveStar;
 
-    // 平均出限定
+    // 計算平均出限定
     const targetsOnly = db.filter(r => r.res === 'target');
     const avgLimited = targetsOnly.length > 0 ? (targetsOnly.reduce((sum, r) => sum + r.total, 0) / targetsOnly.length).toFixed(1) : '0.0';
     document.getElementById('statAvgLimited').innerText = avgLimited;
@@ -294,27 +286,17 @@ function updateLuckStats() {
     const mainF = document.getElementById('mainPoolLuckSelect').value;
     const subF = document.getElementById('subPoolLuckSelect').value;
     
-    // 超級輕量化的查表函數 (仰賴 luck_data.js 中的 beatPercentTable)
     const calcPercentile = (avgPulls) => {
         if (!avgPulls || avgPulls <= 0) return '';
-        
-        // 將平均抽數限制在 1~140 之間的整數
         let pullCount = Math.max(1, Math.min(140, Math.round(parseFloat(avgPulls))));
-        
-        // 確保 beatPercentTable 存在 (防止 luck_data.js 載入失敗報錯)
-        if (typeof beatPercentTable === 'undefined') return '';
-        
-        // 直接從陣列讀取預先算好的 % 數
+        if (typeof beatPercentTable === 'undefined') return ''; // 避免 luck_data 未載入時報錯
         let beatPercent = beatPercentTable[pullCount];
-        
         return `幸運度超過了約 ${beatPercent}% 的玩家`;
     };
 
     const getStats = (items) => {
         if (!items.length) return { text: '---', percentile: '' };
-        // 平均分數用於決定稱號
         const avgScore = items.reduce((a, b) => a + b.luck.s, 0) / items.length;
-        // 平均出限定抽數用於計算 % 數
         const avgLimitedPulls = items.reduce((a, b) => a + b.total, 0) / items.length;
         
         let text = '';
@@ -355,6 +337,8 @@ function renderUI() {
         r._evTime = evTime; r._sortTime = evTime || r.id; r._entryOrder = r.id;
     });
     db.sort((a, b) => b._sortTime - a._sortTime || b._entryOrder - a._entryOrder);
+    
+    // 每次重新渲染時，更新統計資料
     updateLuckStats();
 
     let peakHTML = '';
