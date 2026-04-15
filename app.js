@@ -294,8 +294,6 @@ function updateLuckStats() {
     const getStats = (items) => {
         if (!items.length) return { text: '---', percentile: '' };
         
-        // 使用動態計算出的 luck.s 來決定平均分數
-        const avgScore = items.reduce((a, b) => a + b.luck.s, 0) / items.length;
         const avgLimitedPulls = items.reduce((a, b) => a + b.total, 0) / items.length;
         
         let beatPercent = 0;
