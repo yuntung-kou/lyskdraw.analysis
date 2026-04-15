@@ -53,8 +53,9 @@
                     <div class="radio-group" style="margin-top: 0;">
                         <label class="radio-label"><input type="radio" name="mainPool" value="限定" checked onchange="onPoolChange()"> 💠 限定</label>
                         <label class="radio-label"><input type="radio" name="mainPool" value="復刻" onchange="onPoolChange()"> 🔄 復刻</label>
+                        <label class="radio-label"><input type="radio" name="mainPool" value="常駐" onchange="onPoolChange()"> 🎫 常駐</label>
                     </div>
-                    <div class="radio-group" style="margin-top: 0;">
+                    <div class="radio-group" style="margin-top: 0;" id="subPoolGroup">
                         <label class="radio-label"><input type="radio" name="subPool" value="單人" checked onchange="onPoolChange()"> 👤 單人</label>
                         <label class="radio-label"><input type="radio" name="subPool" value="日卡" onchange="onPoolChange()"> ☀️ 日卡</label>
                         <label class="radio-label"><input type="radio" name="subPool" value="混池" onchange="onPoolChange()"> 👥 混池</label>
@@ -105,23 +106,36 @@
         <div class="right-col">
             <div class="pending-board" style="margin-top: 0;">
                 <div class="pending-item pending-lim" onclick="editPending('lim')">限定池必出UP ✏️<span id="pLim">140</span></div>
+                <div class="pending-item" onclick="editPending('std')" style="color: #3b82f6; border-right: 1px solid var(--border);">常駐池必五星 ✏️<span id="pStd">70</span></div>
                 <div class="pending-item pending-re" onclick="editPending('re')">復刻池必出UP ✏️<span id="pRe">140</span></div>
             </div>
 
             <div class="section-header" style="margin-top: 5px;">📈 抽卡數據統計</div>
+            
             <div class="stats-board">
                 <div class="stat-card">
-                    <div class="stat-title">總抽數</div>
-                    <div class="stat-value"><span id="statTotalPulls">0</span><span style="font-size: 13px; font-weight: normal; margin-left: 2px;">抽</span></div>
-                    <div id="statTotalDiamonds" style="font-size: 11px; color: var(--text-sub); margin-top: 2px;">(0 鑽)</div>
+                    <div class="stat-title">限定池</div>
+                    <div class="stat-value"><span id="statLimPulls">0</span><span class="stat-unit">抽</span></div>
+                    <div class="sub-stats">
+                        <div class="sub-stat-item"><span class="sub-stat-val" id="statLimCount">0/0</span><span class="sub-stat-label">UP/歪</span></div>
+                        <div class="sub-stat-item"><span class="sub-stat-val" id="statLimAvg">0.0</span><span class="sub-stat-label">UP平均</span></div>
+                    </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-title">平均出五星</div>
-                    <div class="stat-value"><span id="statAvgFiveStar">0.0</span><span style="font-size: 13px; font-weight: normal; margin-left: 2px;">抽</span></div>
+                    <div class="stat-title">常駐池</div>
+                    <div class="stat-value"><span id="statStdPulls">0</span><span class="stat-unit">抽</span></div>
+                    <div class="sub-stats">
+                        <div class="sub-stat-item"><span class="sub-stat-val" id="statStdCount">0</span><span class="sub-stat-label">五星數</span></div>
+                        <div class="sub-stat-item"><span class="sub-stat-val" id="statStdAvg">0.0</span><span class="sub-stat-label">五星平均</span></div>
+                    </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-title">平均出限定</div>
-                    <div class="stat-value"><span id="statAvgLimited">0.0</span><span style="font-size: 13px; font-weight: normal; margin-left: 2px;">抽</span></div>
+                    <div class="stat-title">復刻池</div>
+                    <div class="stat-value"><span id="statRePulls">0</span><span class="stat-unit">抽</span></div>
+                    <div class="sub-stats">
+                        <div class="sub-stat-item"><span class="sub-stat-val" id="statReCount">0/0</span><span class="sub-stat-label">UP/歪</span></div>
+                        <div class="sub-stat-item"><span class="sub-stat-val" id="statReAvg">0.0</span><span class="sub-stat-label">UP平均</span></div>
+                    </div>
                 </div>
             </div>
 
@@ -157,6 +171,7 @@
                         <option value="全部" selected>全部紀錄</option>
                         <option value="限定">限定池</option>
                         <option value="復刻">復刻池</option>
+                        <option value="常駐">常駐池</option>
                     </select>
                 </div>
                 <button onclick="clearAll()" style="background:none; border:none; color:#ef4444; font-size:11px; cursor:pointer;">清空</button>
