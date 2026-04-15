@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════
-//  app.js — 戀與深空抽卡分析器 (包含歷史資料自動校正與精確統計)
+//  app.js — 戀與深空抽卡分析器 (包含歷史資料與標籤全面自動校正)
 // ════════════════════════════════════════════════════════════
 
 const leadIcons = { '祁煜': '🐟', '沈星回': '🌟', '黎深': '🍐', '秦徹': '🚘', '夏以晝': '🍎' };
@@ -318,12 +318,10 @@ function renderUI() {
     let db = getDB();
     const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
 
-    // 🌟 資料清理與自動校正 (Data Healing)
+    // 🌟 全面資料清理與自動校正 (Data Healing 終極版)
     db.forEach(r => {
-        // 修正舊的 oshi_spook 標籤
         if (r.res === 'oshi_spook') r.res = 'wai_std';
         
-        // 🌟 自動校正記錯的男主 (確保歪卡常客統計精準)
         if (r.card && r.card !== '未知') {
             let trueLead = null;
             if (typeof standardCards !== 'undefined') {
@@ -339,7 +337,21 @@ function renderUI() {
                     if (trueLead) break;
                 }
             }
-            if (trueLead) r.lead = trueLead; // 強制更正成正確的持卡人
+            
+            if (trueLead) {
+                r.lead = trueLead; // 強制更正成正確的持卡人
+                
+                // 💡 終極修復：重新判定「常駐/限定」與「歪卡狀態」
+                const event = findEvent(r.banner, r.main);
+                const isUpCard = event && event.cards[trueLead] && event.cards[trueLead].includes(r.card);
+                
+                if (isUpCard) {
+                    // 如果是當期 UP 卡，判斷是否為混池歪非主推
+                    r.res = (r.sub === '混池' && oshis.length > 0 && !oshis.includes(trueLead)) ? 'wai_lim' : 'target';
+                } else {
+                    r.res = 'wai_std'; // 非 UP 限定或是常駐卡，統歸為常駐歪卡
+                }
+            }
         }
         
         const evTime = getEventDate(r.banner, r.main);
@@ -360,7 +372,6 @@ function renderUI() {
             peakHTML += `<div class="peak-item"><span class="peak-label-best">🏆 巔峰紀錄:</span> <span>${best.lead ? (oshis.includes(best.lead) ? '💖' : '') + (leadIcons[best.lead] || '') + best.lead : ''} ${best.banner} (${best.total}抽)</span></div>`;
         }
         
-        // 🌟 統計所有歪掉的卡 (包含古早版本的 wai 標籤)
         const waiR = db.filter(r => ['wai_std', 'wai_lim', 'wai'].includes(r.res));
         if (waiR.length > 0) {
             const counts = {}; waiR.forEach(r => counts[r.lead] = (counts[r.lead] || 0) + 1);
