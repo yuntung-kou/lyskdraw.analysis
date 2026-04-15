@@ -34,7 +34,8 @@ async function handleOCR(event) {
             const pendingPulls = result.pendingPulls;
 
             if (typeof window.autoFillFromOCR === 'function') {
-                window.autoFillFromOCR(targetGold.pulls, targetGold.name, targetGold.time, pendingPulls);
+                // 將 OCR 抓取到的原始文字 (raw) 一併傳遞給 app.js，用於辨識「極空迴音」
+                window.autoFillFromOCR(targetGold.pulls, targetGold.name, targetGold.time, pendingPulls, targetGold.raw);
             }
 
             let resText = `✅ 辨識完成！\n\n`;
@@ -162,10 +163,8 @@ function parseOCRLines(rows, colorCanvas, cropTop) {
     return records;
 }
 
-// 繁簡異體字對照（用於卡名模糊比對）
 const VARIANT_CHARS = { '溫': '温', '繾': '缱', '綣': '绻', '晝': '昼', '跡': '迹', '戀': '恋' };
 
-// 🌟 被我誤刪的關鍵函數補回來了！
 function fileToCanvas(file) {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -186,7 +185,7 @@ function countPulls(records) {
     const pendingPulls = pos.length > 0 ? pos[0].i : records.length; 
     if (pos.length < 2) return { pullEvents: [], fiveStarCount: pos.length, pendingPulls, pos };
     return { 
-        pullEvents: pos.slice(0, -1).map((c, i) => ({ name: c.name, pulls: pos[i+1].i - c.i, time: c.time })), 
+        pullEvents: pos.slice(0, -1).map((c, i) => ({ name: c.name, pulls: pos[i+1].i - c.i, time: c.time, raw: c.raw })), 
         fiveStarCount: pos.length, pendingPulls, pos 
     };
 }
