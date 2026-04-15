@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════
-//  app.js — 戀與深空抽卡分析器 (標籤動態核發 + 拔除防歪標籤)
+//  app.js — 戀與深空抽卡分析器 (包含歷史資料自動校正與精確統計)
 // ════════════════════════════════════════════════════════════
 
 const leadIcons = { '祁煜': '🐟', '沈星回': '🌟', '黎深': '🍐', '秦徹': '🚘', '夏以晝': '🍎' };
@@ -205,10 +205,7 @@ window.autoFillFromOCR = function(pulls, cardName, latestTime, pendingPulls) {
     updatePulledCardList();
 };
 
-// 🌟 全新評估標準：根據官方機率分佈對應 前15%, 33%, 51%, 69% 玩家落點
-// 判斷單次出金 (70抽底)：前15%(<=16抽), 前33%(<=40抽), 前51%(<=61抽), 前69%(<=62抽)
 const judgeS = (p) => p <= 16 ? { t: '天選之子 ✨', c: '#16a34a', s: 2 } : p <= 40 ? { t: '幸運兒 🌟', c: '#4ade80', s: 1 } : p <= 61 ? { t: '平凡人 😐', c: '#facc15', s: 0 } : p <= 62 ? { t: '小不幸運 🌧️', c: '#fb923c', s: -1 } : { t: '小倒霉鬼 🌩️', c: '#dc2626', s: -2 };
-// 判斷限定出金 (140抽底)：前15%(<=30抽), 前33%(<=61抽), 前51%(<=65抽), 前69%(<=68抽)
 const judgeT = (p) => p <= 30 ? { t: '天選之子 ✨', c: '#16a34a', s: 2 } : p <= 61 ? { t: '幸運兒 🌟', c: '#4ade80', s: 1 } : p <= 65 ? { t: '平凡人 😐', c: '#facc15', s: 0 } : p <= 68 ? { t: '小不幸運 🌧️', c: '#fb923c', s: -1 } : { t: '小倒霉鬼 🌩️', c: '#dc2626', s: -2 };
 
 function editPending(type) {
@@ -231,7 +228,6 @@ function addRecord() {
     const isUpCard = event && event.cards[pulledLead] && (!card || event.cards[pulledLead].includes(card));
     const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
 
-    // 🌟 完全移除 oshi_spook：如果是限定卡，檢查是否為歪限定；如果不是限定卡，一律算作常駐 (wai_std)
     let judgeResult = isUpCard ? 
         (sub === '混池' && oshis.length > 0 && !oshis.includes(pulledLead) ? 'wai_lim' : 'target') : 
         'wai_std';
@@ -239,7 +235,6 @@ function addRecord() {
     const poolKey = main === '限定' ? 'lim' : 're';
     const currentP = getP(poolKey);
     
-    // 建立新紀錄（不寫死 luck 標籤，讓 renderUI 動態核發）
     let rec = { id: Date.now(), main, sub, lead: pulledLead, banner, card, pulls, res: judgeResult };
 
     if (judgeResult === 'target') {
@@ -262,12 +257,9 @@ function clearAll() { if (confirm('確定清空所有資料？')) { localStorage
 
 function updateLuckStats() {
     const db = getDB();
-    
-    // 計算基本統計數據
     const totalPulls = db.reduce((sum, r) => sum + r.pulls, 0);
     document.getElementById('statTotalPulls').innerText = totalPulls;
 
-    // 💎 計算並顯示等值的鑽石數量 (總抽數 x 150)
     const totalDiamonds = totalPulls * 150;
     const diamondEl = document.getElementById('statTotalDiamonds');
     if (diamondEl) diamondEl.innerText = `(${totalDiamonds.toLocaleString()} 鑽)`;
@@ -279,7 +271,6 @@ function updateLuckStats() {
     const avgLimited = targetsOnly.length > 0 ? (targetsOnly.reduce((sum, r) => sum + r.total, 0) / targetsOnly.length).toFixed(1) : '0.0';
     document.getElementById('statAvgLimited').innerText = avgLimited;
 
-    // 體質鑑定與精確幸運度百分比
     const mainF = document.getElementById('mainPoolLuckSelect').value;
     const subF = document.getElementById('subPoolLuckSelect').value;
     
@@ -293,16 +284,13 @@ function updateLuckStats() {
 
     const getStats = (items) => {
         if (!items.length) return { text: '---', percentile: '' };
-        
         const avgLimitedPulls = items.reduce((a, b) => a + b.total, 0) / items.length;
-        
         let beatPercent = 0;
         if (typeof beatPercentTable !== 'undefined') {
             let pullCount = Math.max(1, Math.min(140, Math.round(avgLimitedPulls)));
             beatPercent = beatPercentTable[pullCount];
         }
         
-        // 🌟 總面板體質：直接掛鉤真正的 % 數標準 (前15%, 33%, 51%, 69%)
         let text = '';
         if (beatPercent >= 85) text = '<span class="title-god">✨ 天選之子</span>';
         else if (beatPercent >= 67) text = '<span class="title-lucky">🌟 幸運兒</span>';
@@ -313,16 +301,10 @@ function updateLuckStats() {
         return { text, percentile: calcPercentile(avgLimitedPulls) };
     };
 
-    const mainItems = db.filter(r => r.res === 'target' && (mainF === '綜合' || r.main === mainF));
-    const subItems = db.filter(r => r.res === 'target' && r.sub === subF);
-
-    const mainRes = getStats(mainItems);
-    document.getElementById('luckMainVal').innerHTML = mainRes.text;
-    document.getElementById('luckMainPercentile').innerHTML = mainRes.percentile;
-
-    const subRes = getStats(subItems);
-    document.getElementById('luckSubVal').innerHTML = subRes.text;
-    document.getElementById('luckSubPercentile').innerHTML = subRes.percentile;
+    document.getElementById('luckMainVal').innerHTML = getStats(db.filter(r => r.res === 'target' && (mainF === '綜合' || r.main === mainF))).text;
+    document.getElementById('luckMainPercentile').innerHTML = getStats(db.filter(r => r.res === 'target' && (mainF === '綜合' || r.main === mainF))).percentile;
+    document.getElementById('luckSubVal').innerHTML = getStats(db.filter(r => r.res === 'target' && r.sub === subF)).text;
+    document.getElementById('luckSubPercentile').innerHTML = getStats(db.filter(r => r.res === 'target' && r.sub === subF)).percentile;
 }
 
 function getEventDate(eventName, mainPool) {
@@ -336,22 +318,36 @@ function renderUI() {
     let db = getDB();
     const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
 
-    // 🌟 資料清洗與動態標籤重算
+    // 🌟 資料清理與自動校正 (Data Healing)
     db.forEach(r => {
-        // 1. 自動修正舊資料，把舊的防歪主推改成常駐
+        // 修正舊的 oshi_spook 標籤
         if (r.res === 'oshi_spook') r.res = 'wai_std';
         
-        // 2. 設定排序時間
+        // 🌟 自動校正記錯的男主 (確保歪卡常客統計精準)
+        if (r.card && r.card !== '未知') {
+            let trueLead = null;
+            if (typeof standardCards !== 'undefined') {
+                for (const lead in standardCards) {
+                    if (standardCards[lead].includes(r.card)) { trueLead = lead; break; }
+                }
+            }
+            if (!trueLead && typeof eventCards !== 'undefined') {
+                for (const event of eventCards) {
+                    for (const lead in event.cards) {
+                        if (event.cards[lead] && event.cards[lead].includes(r.card)) { trueLead = lead; break; }
+                    }
+                    if (trueLead) break;
+                }
+            }
+            if (trueLead) r.lead = trueLead; // 強制更正成正確的持卡人
+        }
+        
         const evTime = getEventDate(r.banner, r.main);
         r._evTime = evTime; r._sortTime = evTime || r.id; r._entryOrder = r.id;
-        
-        // 3. 每次重整頁面時「重新判定幸運度」，確保舊資料完美對齊你的新標準！
         r.luck = (r.res === 'target') ? judgeT(r.total) : judgeS(r.pulls);
     });
     
-    // 將修正後的資料回存 (這樣就算換設備，舊的防歪標籤也死透了)
     setDB(db);
-
     db.sort((a, b) => b._sortTime - a._sortTime || b._entryOrder - a._entryOrder);
     
     updateLuckStats();
@@ -363,8 +359,9 @@ function renderUI() {
             const best = [...targets].sort((a, b) => b.luck.s - a.luck.s || a.total - b.total)[0];
             peakHTML += `<div class="peak-item"><span class="peak-label-best">🏆 巔峰紀錄:</span> <span>${best.lead ? (oshis.includes(best.lead) ? '💖' : '') + (leadIcons[best.lead] || '') + best.lead : ''} ${best.banner} (${best.total}抽)</span></div>`;
         }
-        // 從統計中移除 oshi_spook
-        const waiR = db.filter(r => ['wai_std','wai_lim'].includes(r.res));
+        
+        // 🌟 統計所有歪掉的卡 (包含古早版本的 wai 標籤)
+        const waiR = db.filter(r => ['wai_std', 'wai_lim', 'wai'].includes(r.res));
         if (waiR.length > 0) {
             const counts = {}; waiR.forEach(r => counts[r.lead] = (counts[r.lead] || 0) + 1);
             let maxC = 0; let maxL = [];
@@ -377,16 +374,12 @@ function renderUI() {
     document.getElementById('recordList').innerHTML = db.map(r => {
         let cardTypeStr, statusColor;
         
-        // 徹底只剩下三種狀態：目標限定、非主推限定、常駐
         if (r.res === 'target') { 
-            cardTypeStr = '🎯 限定'; 
-            statusColor = 'var(--primary)'; 
+            cardTypeStr = '🎯 限定'; statusColor = 'var(--primary)'; 
         } else if (r.res === 'wai_lim') { 
-            cardTypeStr = '💔 限定'; 
-            statusColor = '#ef4444'; 
+            cardTypeStr = '💔 限定'; statusColor = '#ef4444'; 
         } else { 
-            cardTypeStr = '☠️ 常駐'; 
-            statusColor = '#475569'; 
+            cardTypeStr = '☠️ 常駐'; statusColor = '#475569'; 
         }
         
         const d = new Date(r._evTime || r.id);
