@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>戀與深空 | 抽卡紀錄分析器</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XFHS7XLB0X"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -13,6 +12,7 @@
       gtag('js', new Date());
       gtag('config', 'G-XFHS7XLB0X');
     </script>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
 </head>
 <body>
 
@@ -24,6 +24,7 @@
     </div>
 
     <div class="main-layout">
+        
         <div class="left-col">
             <div class="oshi-box">
                 <div class="oshi-header">
@@ -99,6 +100,7 @@
             <button class="main-btn" onclick="addRecord()">新增紀錄 📝</button>
         </div>
 
+
         <div class="right-col">
             <div class="pending-board" style="margin-top: 0;">
                 <div class="pending-item pending-lim" onclick="editPending('lim')">限定池必出UP ✏️<span id="pLim">140</span></div>
@@ -106,21 +108,22 @@
             </div>
 
             <div class="section-header" style="margin-top: 5px;">📈 抽卡數據統計</div>
-    <div class="stats-board">
-        <div class="stat-card">
-            <div class="stat-title">總抽數</div>
-            <div class="stat-value"><span id="statTotalPulls">0</span><span style="font-size: 13px; font-weight: normal; margin-left: 2px;">抽</span></div>
-            <div id="statTotalDiamonds" style="font-size: 11px; color: var(--text-sub); margin-top: 2px;">(0 鑽)</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-title">平均出五星</div>
-            <div class="stat-value"><span id="statAvgFiveStar">0.0</span><span style="font-size: 13px; font-weight: normal; margin-left: 2px;">抽</span></div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-title">平均出限定</div>
-            <div class="stat-value"><span id="statAvgLimited">0.0</span><span style="font-size: 13px; font-weight: normal; margin-left: 2px;">抽</span></div>
-        </div>
-    </div>
+            <div class="stats-board">
+                <div class="stat-card">
+                    <div class="stat-title">總抽數</div>
+                    <div class="stat-value"><span id="statTotalPulls">0</span><span style="font-size: 13px; font-weight: normal; margin-left: 2px;">抽</span></div>
+                    <div id="statTotalDiamonds" style="font-size: 11px; color: var(--text-sub); margin-top: 2px;">(0 鑽)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">平均出五星</div>
+                    <div class="stat-value"><span id="statAvgFiveStar">0.0</span><span style="font-size: 13px; font-weight: normal; margin-left: 2px;">抽</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">平均出限定</div>
+                    <div class="stat-value"><span id="statAvgLimited">0.0</span><span style="font-size: 13px; font-weight: normal; margin-left: 2px;">抽</span></div>
+                </div>
+            </div>
+
             <div class="section-header">📊 體質鑑定與巔峰榜</div>
 
             <div class="overall-luck-board">
@@ -149,6 +152,7 @@
             <div class="section-header">📊 抽卡紀錄與長條圖 <button onclick="clearAll()" style="background:none; border:none; color:#ef4444; font-size:11px; cursor:pointer;">清空</button></div>
             <div id="recordList"></div>
         </div>
+
     </div> 
 </div>
 
