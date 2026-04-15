@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════
-//  app.js — 戀與深空抽卡分析器 (包含歷史資料與標籤全面自動校正)
+//  app.js — 戀與深空抽卡分析器 (包含歷史資料自動校正與長條圖過濾)
 // ════════════════════════════════════════════════════════════
 
 const leadIcons = { '祁煜': '🐟', '沈星回': '🌟', '黎深': '🍐', '秦徹': '🚘', '夏以晝': '🍎' };
@@ -284,7 +284,9 @@ function updateLuckStats() {
 
     const getStats = (items) => {
         if (!items.length) return { text: '---', percentile: '' };
+        
         const avgLimitedPulls = items.reduce((a, b) => a + b.total, 0) / items.length;
+        
         let beatPercent = 0;
         if (typeof beatPercentTable !== 'undefined') {
             let pullCount = Math.max(1, Math.min(140, Math.round(avgLimitedPulls)));
@@ -318,7 +320,7 @@ function renderUI() {
     let db = getDB();
     const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
 
-    // 🌟 全面資料清理與自動校正 (Data Healing 終極版)
+    // 資料清理與自動校正
     db.forEach(r => {
         if (r.res === 'oshi_spook') r.res = 'wai_std';
         
@@ -339,17 +341,14 @@ function renderUI() {
             }
             
             if (trueLead) {
-                r.lead = trueLead; // 強制更正成正確的持卡人
-                
-                // 💡 終極修復：重新判定「常駐/限定」與「歪卡狀態」
+                r.lead = trueLead;
                 const event = findEvent(r.banner, r.main);
                 const isUpCard = event && event.cards[trueLead] && event.cards[trueLead].includes(r.card);
                 
                 if (isUpCard) {
-                    // 如果是當期 UP 卡，判斷是否為混池歪非主推
                     r.res = (r.sub === '混池' && oshis.length > 0 && !oshis.includes(trueLead)) ? 'wai_lim' : 'target';
                 } else {
-                    r.res = 'wai_std'; // 非 UP 限定或是常駐卡，統歸為常駐歪卡
+                    r.res = 'wai_std';
                 }
             }
         }
@@ -382,7 +381,16 @@ function renderUI() {
     }
     document.getElementById('peakBoard').innerHTML = peakHTML || '<div style="text-align:center;font-size:12px;color:var(--text-sub)">尚無資料</div>';
 
-    document.getElementById('recordList').innerHTML = db.map(r => {
+    // 🌟 長條圖專屬過濾邏輯
+    const filterSelect = document.getElementById('recordFilterSelect');
+    const filterVal = filterSelect ? filterSelect.value : '全部';
+    
+    let displayDb = db;
+    if (filterVal !== '全部') {
+        displayDb = db.filter(r => r.main === filterVal);
+    }
+
+    document.getElementById('recordList').innerHTML = displayDb.map(r => {
         let cardTypeStr, statusColor;
         
         if (r.res === 'target') { 
