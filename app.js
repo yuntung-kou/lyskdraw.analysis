@@ -298,4 +298,119 @@ function updateLuckStats() {
         const avgScore = items.reduce((a, b) => a + b.luck.s, 0) / items.length;
         const avgLimitedPulls = items.reduce((a, b) => a + b.total, 0) / items.length;
         
-        let beatPercent = 0
+        let beatPercent = 0;
+        if (typeof beatPercentTable !== 'undefined') {
+            let pullCount = Math.max(1, Math.min(140, Math.round(avgLimitedPulls)));
+            beatPercent = beatPercentTable[pullCount];
+        }
+        
+        // 🌟 總面板體質：直接掛鉤真正的 % 數標準 (前15%, 33%, 51%, 69%)
+        let text = '';
+        if (beatPercent >= 85) text = '<span class="title-god">✨ 天選之子</span>';
+        else if (beatPercent >= 67) text = '<span class="title-lucky">🌟 幸運兒</span>';
+        else if (beatPercent >= 49) text = '<span class="title-plain">😐 平凡人</span>';
+        else if (beatPercent >= 31) text = '<span class="title-unlucky">🌧️ 小不幸運</span>';
+        else text = '<span class="title-bad">🌩️ 小倒霉鬼</span>';
+
+        return { text, percentile: calcPercentile(avgLimitedPulls) };
+    };
+
+    const mainItems = db.filter(r => r.res === 'target' && (mainF === '綜合' || r.main === mainF));
+    const subItems = db.filter(r => r.res === 'target' && r.sub === subF);
+
+    const mainRes = getStats(mainItems);
+    document.getElementById('luckMainVal').innerHTML = mainRes.text;
+    document.getElementById('luckMainPercentile').innerHTML = mainRes.percentile;
+
+    const subRes = getStats(subItems);
+    document.getElementById('luckSubVal').innerHTML = subRes.text;
+    document.getElementById('luckSubPercentile').innerHTML = subRes.percentile;
+}
+
+function getEventDate(eventName, mainPool) {
+    const target = findEvent(eventName, mainPool);
+    return target ? parseEventTime(target) : 0;
+}
+
+function renderUI() {
+    document.getElementById('pLim').innerText = 140 - getP('lim');
+    document.getElementById('pRe').innerText  = 140 - getP('re');
+    let db = getDB();
+    const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
+
+    // 🌟 資料清洗與動態標籤重算
+    db.forEach(r => {
+        // 1. 自動修正舊資料，把舊的防歪主推改成常駐
+        if (r.res === 'oshi_spook') r.res = 'wai_std';
+        
+        // 2. 設定排序時間
+        const evTime = getEventDate(r.banner, r.main);
+        r._evTime = evTime; r._sortTime = evTime || r.id; r._entryOrder = r.id;
+        
+        // 3. 每次重整頁面時「重新判定幸運度」，確保舊資料完美對齊你的新標準！
+        r.luck = (r.res === 'target') ? judgeT(r.total) : judgeS(r.pulls);
+    });
+    
+    // 將修正後的資料回存 (這樣就算換設備，舊的防歪標籤也死透了)
+    setDB(db);
+
+    db.sort((a, b) => b._sortTime - a._sortTime || b._entryOrder - a._entryOrder);
+    
+    updateLuckStats();
+
+    let peakHTML = '';
+    if (db.length > 0) {
+        const targets = db.filter(r => r.res === 'target');
+        if (targets.length > 0) {
+            const best = [...targets].sort((a, b) => b.luck.s - a.luck.s || a.total - b.total)[0];
+            peakHTML += `<div class="peak-item"><span class="peak-label-best">🏆 巔峰紀錄:</span> <span>${best.lead ? (oshis.includes(best.lead) ? '💖' : '') + (leadIcons[best.lead] || '') + best.lead : ''} ${best.banner} (${best.total}抽)</span></div>`;
+        }
+        // 從統計中移除 oshi_spook
+        const waiR = db.filter(r => ['wai_std','wai_lim'].includes(r.res));
+        if (waiR.length > 0) {
+            const counts = {}; waiR.forEach(r => counts[r.lead] = (counts[r.lead] || 0) + 1);
+            let maxC = 0; let maxL = [];
+            for (const l in counts) { if (counts[l] > maxC) { maxC = counts[l]; maxL = [l]; } else if (counts[l] === maxC) maxL.push(l); }
+            peakHTML += `<div class="peak-item" style="margin-top:4px;"><span class="peak-label-spook">💔 歪卡常客:</span> <span>${maxL.map(l => (leadIcons[l] || '') + l).join('、')} (${maxC}次)</span></div>`;
+        }
+    }
+    document.getElementById('peakBoard').innerHTML = peakHTML || '<div style="text-align:center;font-size:12px;color:var(--text-sub)">尚無資料</div>';
+
+    document.getElementById('recordList').innerHTML = db.map(r => {
+        let cardTypeStr, statusColor;
+        
+        // 徹底只剩下三種狀態：目標限定、非主推限定、常駐
+        if (r.res === 'target') { 
+            cardTypeStr = '🎯 限定'; 
+            statusColor = 'var(--primary)'; 
+        } else if (r.res === 'wai_lim') { 
+            cardTypeStr = '💔 限定'; 
+            statusColor = '#ef4444'; 
+        } else { 
+            cardTypeStr = '☠️ 常駐'; 
+            statusColor = '#475569'; 
+        }
+        
+        const d = new Date(r._evTime || r.id);
+        const dateStr = r._evTime ? `[${d.getFullYear().toString().slice(2)}/${(d.getMonth()+1).toString().padStart(2,'0')}]` : '[未知]';
+        const isBlack = r.pulls > 55 && r.pulls <= 62 && r.luck.s <= 1;
+
+        return `
+        <div class="h-record-card">
+            <div class="h-bar-bg" style="width: ${Math.min((r.pulls / 70) * 100, 100)}%; background-color: ${r.luck.c};"></div>
+            <div class="h-content">
+                <div class="h-left">
+                    <div class="h-tags">${r.main === '復刻' ? '<span class="tag tag-re">復刻</span>' : ''}<span class="tag tag-lim">${r.sub}</span><span class="tag" style="background-color: ${statusColor};">${cardTypeStr}</span></div>
+                    <span class="h-title"><span style="font-size: 15px; font-weight: bold; color: var(--text-main);">${r.card || '未知'}</span><span style="font-size: 12px; font-weight: normal;"> | ${r.banner}</span><span class="h-date">${dateStr}</span></span>
+                </div>
+                <div class="h-right">
+                    <div class="h-pulls"><span class="pull-num">${r.pulls}</span> 抽</div>
+                    <div class="h-luck ${r.pulls > 55 ? 'luck-high' : ''} ${isBlack ? 'luck-black-light' : ''}" style="${r.pulls <= 55 ? 'background-color:' + r.luck.c + 'BF;color:#fff;' : ''}">${r.luck.t}</div>
+                    <button class="del-btn-icon" onclick="deleteRec(${r.id})">🗑️</button>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+initTheme(); loadOshis(); updateBannerRecommendations(); renderUI();
