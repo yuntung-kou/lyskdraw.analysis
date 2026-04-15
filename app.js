@@ -119,7 +119,6 @@ function renderDropdown(inputId) {
     wrapper.style.display = count > 0 ? 'block' : 'none';
 }
 
-// [FIX #7] filterDropdown 與 showDropdown 完全相同，統一為 renderDropdown 的別名
 const filterDropdown = renderDropdown;
 const showDropdown   = renderDropdown;
 
@@ -137,8 +136,6 @@ function findEvent(eventName, mainPool) {
     return matches.find(e => mainPool === '復刻' ? e.poolType.includes('復刻') : !e.poolType.includes('復刻')) || matches[0];
 }
 
-// [NEW] 提取為獨立 helper：依卡名反查持有角色（standardCards 優先，再搜全部 eventCards）
-// 避免 autoFillFromOCR 與 renderUI 分別重複撰寫相同的搜尋邏輯
 function findTrueLead(cardName) {
     if (typeof standardCards !== 'undefined') {
         for (const lead in standardCards) {
@@ -202,7 +199,6 @@ window.autoFillFromOCR = function (pulls, cardName, latestTime, pendingPulls) {
     if (!cardName || cardName === '未知' || cardName.includes('未知卡名')) return;
     document.getElementById('cardName').value = cardName;
 
-    // [FIX] 使用 findTrueLead helper 取代原本重複的雙層搜尋邏輯
     let foundLead = findTrueLead(cardName);
 
     let matchedEvent = null;
@@ -225,7 +221,6 @@ window.autoFillFromOCR = function (pulls, cardName, latestTime, pendingPulls) {
         document.getElementById('bannerName').value = matchedEvent.eventName;
     }
 
-    // 若 findTrueLead 未能從全域資料找到 lead，再嘗試從配對活動卡表中反查
     if (!foundLead && matchedEvent) {
         for (const lead in matchedEvent.cards) {
             if (matchedEvent.cards[lead].includes(cardName)) { foundLead = lead; break; }
@@ -241,12 +236,11 @@ window.autoFillFromOCR = function (pulls, cardName, latestTime, pendingPulls) {
     const progress = isUpCard ? window.currentPendingPulls : (70 + window.currentPendingPulls);
     setP(poolKey, progress);
 
-    // [FIX #8] 移除多餘的 updatePulledCardList() 呼叫——onPoolChange() 內已包含
     onPoolChange();
 };
 
 // ── 幸運判定 ───────────────────────────────────────────────
-// [FIX #1] 修正 judgeS「小不幸運」範圍：原 p <= 62（只含 p === 62）→ 改為 p <= 65，使範圍合理
+// judgeS: 針對歪卡/單張五星的判定 (維持原設定)
 const judgeS = (p) =>
     p <= 16 ? { t: '天選之子 ✨', c: '#16a34a', s:  2 } :
     p <= 40 ? { t: '幸運兒 🌟',  c: '#4ade80', s:  1 } :
@@ -254,9 +248,11 @@ const judgeS = (p) =>
     p <= 65 ? { t: '小不幸運 🌧️', c: '#fb923c', s: -1 } :
               { t: '小倒霉鬼 🌩️', c: '#dc2626', s: -2 };
 
+// judgeT: 針對命中目標 UP 卡的判定 (以 140 抽為限)
+// 根據 luck_data.js 精準反推抽數門檻：PR 85, 63.5, 48, 32.5
 const judgeT = (p) =>
     p <= 30 ? { t: '天選之子 ✨', c: '#16a34a', s:  2 } :
-    p <= 61 ? { t: '幸運兒 🌟',  c: '#4ade80', s:  1 } :
+    p <= 62 ? { t: '幸運兒 🌟',  c: '#4ade80', s:  1 } :
     p <= 65 ? { t: '平凡人 😐',  c: '#facc15', s:  0 } :
     p <= 68 ? { t: '小不幸運 🌧️', c: '#fb923c', s: -1 } :
               { t: '小倒霉鬼 🌩️', c: '#dc2626', s: -2 };
@@ -280,7 +276,6 @@ function addRecord() {
     if (isNaN(pulls) || pulls < 1 || pulls > 70) return alert('請輸入 1-70 抽！');
 
     const event = findEvent(banner, main);
-    // [FIX #2] 移除 !card 條件：空白卡名不應被視為 UP 卡，避免影響統計正確性
     const isUpCard = !!(event && card && event.cards[pulledLead]?.includes(card));
     const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
 
@@ -326,8 +321,6 @@ function clearAll() {
 }
 
 // ── 統計面板 ───────────────────────────────────────────────
-// [FIX #4] 接受外部傳入的 db 參數，避免 renderUI 呼叫時重複解析 localStorage
-// [FIX #9] 合併原本的 calcPercentile 進 getStats，消除 beatPercent 的重複計算
 function updateLuckStats(db = getDB()) {
     const totalPulls = db.reduce((sum, r) => sum + r.pulls, 0);
     document.getElementById('statTotalPulls').innerText = totalPulls;
@@ -347,7 +340,6 @@ function updateLuckStats(db = getDB()) {
     const mainF = document.getElementById('mainPoolLuckSelect').value;
     const subF  = document.getElementById('subPoolLuckSelect').value;
 
-    // [FIX #9] 原 calcPercentile 與 getStats 各算一次 beatPercent，現合併為一次
     function getStats(items) {
         if (!items.length) return { text: '---', percentile: '' };
         const avg        = items.reduce((a, b) => a + b.total, 0) / items.length;
@@ -355,17 +347,17 @@ function updateLuckStats(db = getDB()) {
         const beatPercent = (typeof beatPercentTable !== 'undefined') ? beatPercentTable[pullCount] : 0;
 
         let text;
-        if      (beatPercent >= 85) text = '<span class="title-god">✨ 天選之子</span>';
-        else if (beatPercent >= 67) text = '<span class="title-lucky">🌟 幸運兒</span>';
-        else if (beatPercent >= 49) text = '<span class="title-plain">😐 平凡人</span>';
-        else if (beatPercent >= 31) text = '<span class="title-unlucky">🌧️ 小不幸運</span>';
-        else                        text = '<span class="title-bad">🌩️ 小倒霉鬼</span>';
+        // 依照嚴格的 PR 門檻 (85 / 63.5 / 48 / 32.5)
+        if      (beatPercent >= 85)   text = '<span class="title-god">✨ 天選之子</span>';
+        else if (beatPercent >= 63.5) text = '<span class="title-lucky">🌟 幸運兒</span>';
+        else if (beatPercent >= 48)   text = '<span class="title-plain">😐 平凡人</span>';
+        else if (beatPercent >= 32.5) text = '<span class="title-unlucky">🌧️ 小不幸運</span>';
+        else                          text = '<span class="title-bad">🌩️ 小倒霉鬼</span>';
 
         const percentile = beatPercent > 0 ? `幸運度超過了約 ${beatPercent}% 的玩家` : '';
         return { text, percentile };
     }
 
-    // [FIX #5] 快取 getStats 結果，同一份篩選資料只計算一次
     const mainStats = getStats(db.filter(r => r.res === 'target' && (mainF === '綜合' || r.main === mainF)));
     const subStats  = getStats(db.filter(r => r.res === 'target' && r.sub === subF));
 
@@ -382,8 +374,6 @@ function getEventDate(eventName, mainPool) {
 }
 
 // ── 一次性資料遷移 ─────────────────────────────────────────
-// [FIX #3] 將舊格式轉換（oshi_spook → wai_std）從 renderUI 中獨立出來，
-// 只在啟動時執行一次，不再於每次渲染時重複寫入 localStorage
 function migrateDB() {
     const db = getDB();
     let changed = false;
@@ -398,12 +388,9 @@ function renderUI() {
     document.getElementById('pLim').innerText = 140 - getP('lim');
     document.getElementById('pRe').innerText  = 140 - getP('re');
 
-    // [FIX #4] getDB() 只呼叫一次，同一個 db 實例貫穿整個渲染流程
     const db    = getDB();
     const oshis = JSON.parse(localStorage.getItem('oshis')) || [];
 
-    // [FIX #3] 校正邏輯保留，但只在資料真正有異動時才呼叫 setDB
-    // [FIX #6] setDB 本身已會過濾衍生欄位，不會將 _evTime 等存入 localStorage
     let dbChanged = false;
     db.forEach(r => {
         if (r.card && r.card !== '未知') {
@@ -418,7 +405,6 @@ function renderUI() {
                 if (r.res !== newRes) { r.res = newRes; dbChanged = true; }
             }
         }
-        // 計算顯示用衍生欄位（不存入 localStorage，由 setDB 過濾）
         const evTime   = getEventDate(r.banner, r.main);
         r._evTime      = evTime;
         r._sortTime    = evTime || r.id;
@@ -430,7 +416,6 @@ function renderUI() {
 
     db.sort((a, b) => b._sortTime - a._sortTime || b._entryOrder - a._entryOrder);
 
-    // [FIX #4] 傳入已解析的 db，updateLuckStats 不再自行呼叫 getDB()
     updateLuckStats(db);
 
     // ── 巔峰榜 ──
@@ -492,7 +477,6 @@ function renderUI() {
 }
 
 // ── 啟動 ───────────────────────────────────────────────────
-// [FIX #3] migrateDB 只在啟動時執行一次，不再混入每次 renderUI
 migrateDB();
 initTheme();
 loadOshis();
