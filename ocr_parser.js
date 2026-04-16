@@ -10,11 +10,13 @@ async function handleOCR(event) {
     statusEl.style.color = '#c084fc';
 
     try {
-        let pages = []; let warnings = [];
+        let pages = []; let warnings = []; let isStandardGlobal = false;
         for (let i = 0; i < files.length; i++) {
             statusEl.innerText = `⏳ 辨識中... (${i + 1}/${files.length})`;
             const records = await extractRecordsFromImage(files[i]);
             
+            if (records._isStandardPool) isStandardGlobal = true; // 記錄是否含有常駐池關鍵字
+
             if (records.length < 5) warnings.push(`第 ${i + 1} 張僅讀取到 ${records.length} 筆`);
             if (records.length > 0) {
                 const validTimeRecord = records.find(r => r._hasRealTime);
@@ -29,13 +31,17 @@ async function handleOCR(event) {
         const result = countPulls(allRecords);
 
         if (result.pullEvents.length > 0) {
-            // 💡 取得「最先抽到」的那張五星 (陣列的最後一項) 作為表單自動填寫的目標
             const targetGold = result.pullEvents[result.pullEvents.length - 1]; 
             const pendingPulls = result.pendingPulls;
 
+            // 若全域圖片文字中偵測到常駐池關鍵字，偷偷塞入 raw 中讓 app.js 觸發常駐池判定
+            let finalRaw = targetGold.raw;
+            if (isStandardGlobal) {
+                finalRaw += " 極空迴音";
+            }
+
             if (typeof window.autoFillFromOCR === 'function') {
-                // 將 OCR 抓取到的原始文字 (raw) 一併傳遞給 app.js，用於辨識「極空迴音」
-                window.autoFillFromOCR(targetGold.pulls, targetGold.name, targetGold.time, pendingPulls, targetGold.raw);
+                window.autoFillFromOCR(targetGold.pulls, targetGold.name, targetGold.time, pendingPulls, finalRaw);
             }
 
             let resText = `✅ 辨識完成！\n\n`;
@@ -61,6 +67,10 @@ async function extractRecordsFromImage(file) {
     ctx.drawImage(colorCanvas, 0, -cropTop);
     const result = await Tesseract.recognize(ocrCanvas, 'chi_tra+eng');
     
+    // 偵測整張圖片是否包含常駐池關鍵字
+    const fullText = result.data.text || "";
+    const isStandardPool = /極空|迴音|回音/.test(fullText);
+
     const rows = [];
     for (const line of result.data.lines) {
         const text = line.text.trim();
@@ -86,7 +96,9 @@ async function extractRecordsFromImage(file) {
         }
     }
     rows.sort((a, b) => a.yCenter - b.yCenter);
-    return parseOCRLines(rows, colorCanvas, cropTop);
+    const records = parseOCRLines(rows, colorCanvas, cropTop);
+    records._isStandardPool = isStandardPool; // 附加常駐池標記
+    return records;
 }
 
 function detectStarFromColor(colorCanvas, bbox, cropTop) {
