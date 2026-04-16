@@ -1,7 +1,31 @@
 // ═══════════════════════════════════════════════════════════
-//  ocr_parser.js — 分區濾鏡 + 智慧常駐池辨識 (v24 最終修復版)
+//  ocr_parser.js — 智慧行合併 + 特徵防丟失版 (v24 卡池名稱修復版)
 // ═══════════════════════════════════════════════════════════
 
+// ── 常駐卡池名稱辨識表 ────────────────────────────────────────
+// 只有常駐卡池需要靠卡池名稱來切換；限定/復刻池已有卡名反查機制
+// 左側列出 OCR 可能辨識到的各種寫法（含常見錯字）
+const KNOWN_POOL_NAMES = [
+    { patterns: ['極空迴響', '極空回響', '極空迴音', '極空回音'], key: '常駐' },
+];
+
+/**
+ * 從已合併的 OCR rows 中掃描卡池名稱。
+ * 在嚴格過濾（parseOCRLines）之前呼叫，避免卡池行被跳過。
+ */
+function detectPoolName(rows) {
+    for (const row of rows) {
+        const t = row.text.replace(/\s+/g, '');
+        for (const pool of KNOWN_POOL_NAMES) {
+            if (pool.patterns.some(p => t.includes(p))) {
+                return pool.key;
+            }
+        }
+    }
+    return null;
+}
+
+// ── handleOCR ────────────────────────────────────────────────
 async function handleOCR(event) {
     const files = event.target.files;
     if (!files || files.length === 0) return;
@@ -10,12 +34,15 @@ async function handleOCR(event) {
     statusEl.style.color = '#c084fc';
 
     try {
-        let pages = []; let warnings = []; let isStandardGlobal = false;
+        let pages = []; let warnings = [];
+        let detectedPoolName = null; // ← 新增：收集卡池名稱
+
         for (let i = 0; i < files.length; i++) {
             statusEl.innerText = `⏳ 辨識中... (${i + 1}/${files.length})`;
-            const records = await extractRecordsFromImage(files[i]);
-            
-            if (records._isStandardPool) isStandardGlobal = true; 
+            const { records, poolName } = await extractRecordsFromImage(files[i]); // ← 解構新回傳值
+
+            // 只要任一頁有辨識到卡池名，就採用（優先用第一張）
+            if (poolName && !detectedPoolName) detectedPoolName = poolName;
 
             if (records.length < 5) warnings.push(`第 ${i + 1} 張僅讀取到 ${records.length} 筆`);
             if (records.length > 0) {
@@ -31,19 +58,24 @@ async function handleOCR(event) {
         const result = countPulls(allRecords);
 
         if (result.pullEvents.length > 0) {
-            const targetGold = result.pullEvents[result.pullEvents.length - 1]; 
+            const targetGold = result.pullEvents[result.pullEvents.length - 1];
             const pendingPulls = result.pendingPulls;
 
-            let finalRaw = targetGold.raw;
-            if (isStandardGlobal) {
-                finalRaw += " 極空迴音"; 
-            }
-
             if (typeof window.autoFillFromOCR === 'function') {
-                window.autoFillFromOCR(targetGold.pulls, targetGold.name, targetGold.time, pendingPulls, finalRaw);
+                // ← 第 6 個參數新增 detectedPoolName，app.js 接到後可自動切換卡池選項
+                window.autoFillFromOCR(
+                    targetGold.pulls,
+                    targetGold.name,
+                    targetGold.time,
+                    pendingPulls,
+                    targetGold.raw,
+                    detectedPoolName   // ★ 新增
+                );
             }
 
-            let resText = `✅ 辨識完成！\n\n`;
+            let resText = `✅ 辨識完成！`;
+            if (detectedPoolName) resText += `（${detectedPoolName}）`;
+            resText += `\n\n`;
             [...result.pullEvents].reverse().forEach(evt => { resText += `${evt.name}：${evt.pulls} 抽\n`; });
             if (pendingPulls > 0) resText += `\n💡 偵測到出金後已墊 ${pendingPulls} 抽`;
             if (warnings.length > 0) resText += `\n(⚠️ ${warnings.join('；')})`;
@@ -55,37 +87,20 @@ async function handleOCR(event) {
     } catch (err) { statusEl.innerText = '❌ 失敗：' + (err.message || '未知'); statusEl.style.color = '#ef4444'; }
 }
 
+// ── extractRecordsFromImage ──────────────────────────────────
 async function extractRecordsFromImage(file) {
     const colorCanvas = await fileToCanvas(file);
     const { width, height } = colorCanvas;
-    
-    // 將畫面分為上下兩部分處理：前 30% 為標題與卡池按鈕區，後 70% 為列表區
-    const splitY = Math.floor(height * 0.30);
-    
+    const cropTop = Math.floor(height * 0.15);
     const ocrCanvas = document.createElement('canvas');
-    ocrCanvas.width = width; 
-    ocrCanvas.height = height; 
+    ocrCanvas.width = width; ocrCanvas.height = height - cropTop;
     const ctx = ocrCanvas.getContext('2d');
-    
-    // 1. 上半部：使用較溫和的濾鏡，避免「極空迴音」等灰底白字按鈕被高對比洗白
-    ctx.filter = 'grayscale(100%) invert(100%) contrast(120%)';
-    ctx.drawImage(colorCanvas, 0, 0, width, splitY, 0, 0, width, splitY);
-
-    // 2. 下半部：使用高強度的對比濾鏡，強化黑色背景上的列表白字
     ctx.filter = 'grayscale(100%) invert(100%) contrast(180%) brightness(110%)';
-    ctx.drawImage(colorCanvas, 0, splitY, width, height - splitY, 0, splitY, width, height - splitY);
-
+    ctx.drawImage(colorCanvas, 0, -cropTop);
     const result = await Tesseract.recognize(ocrCanvas, 'chi_tra+eng');
     
-    // 檢查全域是否偵測到常駐池特徵
-    const fullText = result.data.text || "";
-    const isStandardPool = /極空|迴音|回音/.test(fullText.replace(/\s+/g, ''));
-
     const rows = [];
     for (const line of result.data.lines) {
-        // 忽略位於上半部 (y1 < splitY) 的文字，不把它們當作抽卡紀錄行來解析
-        if (line.bbox.y1 < splitY) continue;
-
         const text = line.text.trim();
         if (text.length < 2) continue;
         
@@ -109,13 +124,15 @@ async function extractRecordsFromImage(file) {
         }
     }
     rows.sort((a, b) => a.yCenter - b.yCenter);
-    
-    // 傳入 0 作為 cropTop，因為 rows 的 bbox 已經是對齊原圖的絕對座標
-    const records = parseOCRLines(rows, colorCanvas, 0); 
-    records._isStandardPool = isStandardPool;
-    return records;
+
+    // ★ 在嚴格過濾前先掃卡池名稱（卡池那行不含角色名/星數/日期，舊版會被跳過）
+    const poolName = detectPoolName(rows);
+
+    const records = parseOCRLines(rows, colorCanvas, cropTop);
+    return { records, poolName }; // ← 改為回傳物件
 }
 
+// ── detectStarFromColor（不變）────────────────────────────────
 function detectStarFromColor(colorCanvas, bbox, cropTop) {
     const y0 = Math.max(0, bbox.y0 + cropTop);
     const h = bbox.y1 - bbox.y0;
@@ -134,6 +151,7 @@ function detectStarFromColor(colorCanvas, bbox, cropTop) {
     return 3;
 }
 
+// ── parseOCRLines（不變）─────────────────────────────────────
 function parseOCRLines(rows, colorCanvas, cropTop) {
     const records = [];
     let known = [];
@@ -192,6 +210,7 @@ function parseOCRLines(rows, colorCanvas, cropTop) {
 
 const VARIANT_CHARS = { '溫': '温', '繾': '缱', '綣': '绻', '晝': '昼', '跡': '迹', '戀': '恋' };
 
+// ── fileToCanvas（不變）──────────────────────────────────────
 function fileToCanvas(file) {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -207,6 +226,7 @@ function fileToCanvas(file) {
     });
 }
 
+// ── countPulls（不變）────────────────────────────────────────
 function countPulls(records) {
     const pos = records.map((r, i) => ({ ...r, i })).filter(r => r.star === 5);
     const pendingPulls = pos.length > 0 ? pos[0].i : records.length; 
