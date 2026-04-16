@@ -207,7 +207,7 @@ window.updatePulledCardList = function () {
     dropdownData.cardName = [...new Set(options)];
 };
 
-window.autoFillFromOCR = function (pulls, cardName, latestTime, pendingPulls, rawText = '') {
+window.autoFillFromOCR = function (pulls, cardName, latestTime, pendingPulls, rawText = '', poolName = null) {
     window.currentPendingPulls = pendingPulls || 0;
     document.getElementById('pulls').value = pulls;
     if (!cardName || cardName === '未知' || cardName.includes('未知卡名')) return;
@@ -215,7 +215,16 @@ window.autoFillFromOCR = function (pulls, cardName, latestTime, pendingPulls, ra
 
     let foundLead = findTrueLead(cardName);
     let matchedEvent = null;
-    
+
+    // ★ 常駐卡池：ocr_parser 偵測頁面標題「極空迴響」後傳入 poolName='常駐'
+    //   舊的 rawText.includes('極空迴音') 已移除（rawText 是單列卡牌文字，不含卡池標題）
+    if (poolName === '常駐') {
+        document.querySelector(`input[name="mainPool"][value="常駐"]`).checked = true;
+        document.getElementById('bannerName').value = '極空迴音';
+        onPoolChange();
+        return;
+    }
+
     if (typeof eventCards !== 'undefined') {
         const possibleEvents = eventCards.filter(ev => Object.values(ev.cards).some(c => c.includes(cardName)));
         if (possibleEvents.length > 0) {
@@ -226,10 +235,7 @@ window.autoFillFromOCR = function (pulls, cardName, latestTime, pendingPulls, ra
         }
     }
 
-    if (rawText.includes('極空迴音')) {
-        document.querySelector(`input[name="mainPool"][value="常駐"]`).checked = true;
-        document.getElementById('bannerName').value = '極空迴音';
-    } else if (matchedEvent) {
+    if (matchedEvent) {
         const isRerun = matchedEvent.poolType.includes('復刻');
         document.querySelector(`input[name="mainPool"][value="${isRerun ? '復刻' : '限定'}"]`).checked = true;
         if (matchedEvent.poolType.includes('混池'))      document.querySelector('input[name="subPool"][value="混池"]').checked = true;
