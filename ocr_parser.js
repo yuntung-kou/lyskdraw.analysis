@@ -59,20 +59,27 @@ async function handleOCR(event) {
 async function extractRecordsFromImage(file) {
     const colorCanvas = await fileToCanvas(file);
     const { width, height } = colorCanvas;
-    const cropTop = Math.floor(height * 0.15);
+    const cropTop = Math.floor(height * 0.15); 
+    
+    // 【修改點1】不要裁切畫布，讓 OCR 掃描完整圖片以尋找最上方的卡池名稱
     const ocrCanvas = document.createElement('canvas');
-    ocrCanvas.width = width; ocrCanvas.height = height - cropTop;
+    ocrCanvas.width = width; 
+    ocrCanvas.height = height; 
     const ctx = ocrCanvas.getContext('2d');
     ctx.filter = 'grayscale(100%) invert(100%) contrast(180%) brightness(110%)';
-    ctx.drawImage(colorCanvas, 0, -cropTop);
+    ctx.drawImage(colorCanvas, 0, 0); 
+    
     const result = await Tesseract.recognize(ocrCanvas, 'chi_tra+eng');
     
     // 偵測整張圖片是否包含常駐池關鍵字
     const fullText = result.data.text || "";
-    const isStandardPool = /極空|迴音|回音/.test(fullText);
+    const isStandardPool = /極空|迴音|回音/.test(fullText.replace(/\s+/g, ''));
 
     const rows = [];
     for (const line of result.data.lines) {
+        // 【修改點2】在組裝紀錄列表時，才把位於畫面上半部 (cropTop 範圍內) 的雜訊略過
+        if (line.bbox.y1 < cropTop) continue;
+
         const text = line.text.trim();
         if (text.length < 2) continue;
         
@@ -96,8 +103,10 @@ async function extractRecordsFromImage(file) {
         }
     }
     rows.sort((a, b) => a.yCenter - b.yCenter);
-    const records = parseOCRLines(rows, colorCanvas, cropTop);
-    records._isStandardPool = isStandardPool; // 附加常駐池標記
+    
+    // 【修改點3】此處傳入的 cropTop 設為 0，因為現在行座標已是相對於完整圖片的絕對座標
+    const records = parseOCRLines(rows, colorCanvas, 0); 
+    records._isStandardPool = isStandardPool;
     return records;
 }
 
