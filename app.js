@@ -352,27 +352,39 @@ function clearAll() {
     }
 }
 
-// ── 四欄式統計面板 ─────────────────────────────────────────
+// ── 四欄式統計面板 ────────────────────────────────────────
+// 替換原有的 updateLuckStats 函式 (包含內部的 getLuckHtml 修改)
 function updateLuckStats(db = getDB()) {
     // 依據平均抽數產生體質標籤 HTML (若無資料回傳 ---)
     function getLuckHtml(avgPulls, isTarget) {
         if (avgPulls === 0) return '<span style="color:var(--text-sub)">---</span>';
+        
+        let mainHtml = '';
+        let percentText = '';
+
         if (isTarget) {
             const pullCount = Math.max(1, Math.min(140, Math.round(avgPulls)));
             const beatPercent = (typeof beatPercentTable !== 'undefined') ? beatPercentTable[pullCount] : 0;
-            if      (beatPercent >= 85)   return '<span class="title-god">✨ 天選之子</span>';
-            else if (beatPercent >= 63.5) return '<span class="title-lucky">🌟 幸運兒</span>';
-            else if (beatPercent >= 48)   return '<span class="title-plain">😐 平凡人</span>';
-            else if (beatPercent >= 32.5) return '<span class="title-unlucky">🌧️ 小不幸運</span>';
-            else                          return '<span class="title-bad">🌩️ 小倒霉鬼</span>';
+            if      (beatPercent >= 85)   mainHtml = '<span class="title-god">✨ 天選之子</span>';
+            else if (beatPercent >= 63.5) mainHtml = '<span class="title-lucky">🌟 幸運兒</span>';
+            else if (beatPercent >= 48)   mainHtml = '<span class="title-plain">😐 平凡人</span>';
+            else if (beatPercent >= 32.5) mainHtml = '<span class="title-unlucky">🌧️ 小不幸運</span>';
+            else                          mainHtml = '<span class="title-bad">🌩️ 小倒霉鬼</span>';
+            
+            percentText = `超越 ${beatPercent}% 玩家`;
         } else {
             const p = avgPulls;
-            if (p <= 16) return '<span class="title-god">✨ 天選之子</span>';
-            if (p <= 40) return '<span class="title-lucky">🌟 幸運兒</span>';
-            if (p <= 61) return '<span class="title-plain">😐 平凡人</span>';
-            if (p <= 65) return '<span class="title-unlucky">🌧️ 小不幸運</span>';
-            return '<span class="title-bad">🌩️ 小倒霉鬼</span>';
+            if (p <= 16) mainHtml = '<span class="title-god">✨ 天選之子</span>';
+            else if (p <= 40) mainHtml = '<span class="title-lucky">🌟 幸運兒</span>';
+            else if (p <= 61) mainHtml = '<span class="title-plain">😐 平凡人</span>';
+            else if (p <= 65) mainHtml = '<span class="title-unlucky">🌧️ 小不幸運</span>';
+            else mainHtml = '<span class="title-bad">🌩️ 小倒霉鬼</span>';
         }
+
+        // 將百分比文字以 block 形式與小字體附加於下方，維持與鑽石數大小一致 (11px)
+        const percentHtml = percentText ? `<span style="display:block; font-size:11px; color:var(--text-sub); font-weight:normal; margin-top:3px;">${percentText}</span>` : '';
+        
+        return mainHtml + percentHtml;
     }
 
     // 填充單一卡片的 Helper
