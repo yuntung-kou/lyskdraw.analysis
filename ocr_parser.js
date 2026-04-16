@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════
-//  ocr_parser.js — 智慧行合併 + 特徵防丟失版 (v23 完整修復版)
+//  ocr_parser.js — 分區濾鏡 + 智慧常駐池辨識 (v24 最終修復版)
 // ═══════════════════════════════════════════════════════════
 
 async function handleOCR(event) {
@@ -15,7 +15,7 @@ async function handleOCR(event) {
             statusEl.innerText = `⏳ 辨識中... (${i + 1}/${files.length})`;
             const records = await extractRecordsFromImage(files[i]);
             
-            if (records._isStandardPool) isStandardGlobal = true; // 記錄是否含有常駐池關鍵字
+            if (records._isStandardPool) isStandardGlobal = true; 
 
             if (records.length < 5) warnings.push(`第 ${i + 1} 張僅讀取到 ${records.length} 筆`);
             if (records.length > 0) {
@@ -34,10 +34,9 @@ async function handleOCR(event) {
             const targetGold = result.pullEvents[result.pullEvents.length - 1]; 
             const pendingPulls = result.pendingPulls;
 
-            // 若全域圖片文字中偵測到常駐池關鍵字，偷偷塞入 raw 中讓 app.js 觸發常駐池判定
             let finalRaw = targetGold.raw;
             if (isStandardGlobal) {
-                finalRaw += " 極空迴音";
+                finalRaw += " 極空迴音"; 
             }
 
             if (typeof window.autoFillFromOCR === 'function') {
@@ -59,26 +58,33 @@ async function handleOCR(event) {
 async function extractRecordsFromImage(file) {
     const colorCanvas = await fileToCanvas(file);
     const { width, height } = colorCanvas;
-    const cropTop = Math.floor(height * 0.15); 
     
-    // 【修改點1】不要裁切畫布，讓 OCR 掃描完整圖片以尋找最上方的卡池名稱
+    // 將畫面分為上下兩部分處理：前 30% 為標題與卡池按鈕區，後 70% 為列表區
+    const splitY = Math.floor(height * 0.30);
+    
     const ocrCanvas = document.createElement('canvas');
     ocrCanvas.width = width; 
     ocrCanvas.height = height; 
     const ctx = ocrCanvas.getContext('2d');
-    ctx.filter = 'grayscale(100%) invert(100%) contrast(180%) brightness(110%)';
-    ctx.drawImage(colorCanvas, 0, 0); 
     
+    // 1. 上半部：使用較溫和的濾鏡，避免「極空迴音」等灰底白字按鈕被高對比洗白
+    ctx.filter = 'grayscale(100%) invert(100%) contrast(120%)';
+    ctx.drawImage(colorCanvas, 0, 0, width, splitY, 0, 0, width, splitY);
+
+    // 2. 下半部：使用高強度的對比濾鏡，強化黑色背景上的列表白字
+    ctx.filter = 'grayscale(100%) invert(100%) contrast(180%) brightness(110%)';
+    ctx.drawImage(colorCanvas, 0, splitY, width, height - splitY, 0, splitY, width, height - splitY);
+
     const result = await Tesseract.recognize(ocrCanvas, 'chi_tra+eng');
     
-    // 偵測整張圖片是否包含常駐池關鍵字
+    // 檢查全域是否偵測到常駐池特徵
     const fullText = result.data.text || "";
     const isStandardPool = /極空|迴音|回音/.test(fullText.replace(/\s+/g, ''));
 
     const rows = [];
     for (const line of result.data.lines) {
-        // 【修改點2】在組裝紀錄列表時，才把位於畫面上半部 (cropTop 範圍內) 的雜訊略過
-        if (line.bbox.y1 < cropTop) continue;
+        // 忽略位於上半部 (y1 < splitY) 的文字，不把它們當作抽卡紀錄行來解析
+        if (line.bbox.y1 < splitY) continue;
 
         const text = line.text.trim();
         if (text.length < 2) continue;
@@ -104,7 +110,7 @@ async function extractRecordsFromImage(file) {
     }
     rows.sort((a, b) => a.yCenter - b.yCenter);
     
-    // 【修改點3】此處傳入的 cropTop 設為 0，因為現在行座標已是相對於完整圖片的絕對座標
+    // 傳入 0 作為 cropTop，因為 rows 的 bbox 已經是對齊原圖的絕對座標
     const records = parseOCRLines(rows, colorCanvas, 0); 
     records._isStandardPool = isStandardPool;
     return records;
