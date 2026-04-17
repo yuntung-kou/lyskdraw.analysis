@@ -73,9 +73,9 @@ function updateBannerRecommendations() {
     
     if (mainPool === '常駐') {
         if(subPoolGroup) subPoolGroup.style.opacity = '0.3';
-        dropdownData.bannerName = ['極空迴響'];
+        dropdownData.bannerName = ['極空迴音'];
         dropdownData.upCardName = typeof standardCards !== 'undefined' ? [...new Set(Object.values(standardCards).flat())] : [];
-        document.getElementById('bannerName').value = '極空迴響';
+        document.getElementById('bannerName').value = '極空迴音';
         return;
     }
     
@@ -216,8 +216,6 @@ window.autoFillFromOCR = function (pulls, cardName, latestTime, pendingPulls, ra
     let foundLead = findTrueLead(cardName);
     let matchedEvent = null;
 
-    // ★ 常駐卡池：ocr_parser 偵測頁面標題「極空迴響」後傳入 poolName='常駐'
-    //   舊的 rawText.includes('極空迴音') 已移除（rawText 是單列卡牌文字，不含卡池標題）
     if (poolName === '常駐') {
         document.querySelector(`input[name="mainPool"][value="常駐"]`).checked = true;
         document.getElementById('bannerName').value = '極空迴音';
@@ -348,36 +346,50 @@ function deleteRec(id) {
 }
 
 function clearAll() {
-    if (confirm('確定清空所有資料？')) {
-        localStorage.removeItem('db_v4');
-        _setP('lim', 0);
-        _setP('re', 0);
-        _setP('std', 0);
-        window.currentPendingPulls = 0;
+    const filterSelect = document.getElementById('recordFilterSelect');
+    const filterVal    = filterSelect ? filterSelect.value : '全部';
+
+    let msg = filterVal === '全部' ? '確定清空【所有】抽卡資料？' : `確定清空【${filterVal}池】的所有資料？`;
+
+    if (confirm(msg)) {
+        if (filterVal === '全部') {
+            localStorage.removeItem('db_v4');
+            _setP('lim', 0);
+            _setP('re', 0);
+            _setP('std', 0);
+            window.currentPendingPulls = 0;
+        } else {
+            const db = getDB();
+            const newDb = db.filter(r => r.main !== filterVal);
+            setDB(newDb);
+
+            // 重置該池的墊抽
+            if (filterVal === '限定') _setP('lim', 0);
+            if (filterVal === '復刻') _setP('re', 0);
+            if (filterVal === '常駐') _setP('std', 0);
+        }
         renderUI();
     }
 }
 
 // ── 四欄式統計面板 ────────────────────────────────────────
-// 替換原有的 updateLuckStats 函式 (包含內部的 getLuckHtml 修改)
 function updateLuckStats(db = getDB()) {
-    // 依據平均抽數產生體質標籤 HTML (若無資料回傳 ---)
     function getLuckHtml(avgPulls, isTarget) {
         if (avgPulls === 0) return '<span style="color:var(--text-sub)">---</span>';
         
         let mainHtml = '';
         let percentText = '';
 
+        const pullCount = Math.max(1, Math.min(140, Math.round(avgPulls)));
+        const beatPercent = (typeof beatPercentTable !== 'undefined') ? beatPercentTable[pullCount] : 0;
+        
         if (isTarget) {
-            const pullCount = Math.max(1, Math.min(140, Math.round(avgPulls)));
-            const beatPercent = (typeof beatPercentTable !== 'undefined') ? beatPercentTable[pullCount] : 0;
             if      (beatPercent >= 85)   mainHtml = '<span class="title-god">✨ 天選之子</span>';
             else if (beatPercent >= 63.5) mainHtml = '<span class="title-lucky">🌟 幸運兒</span>';
             else if (beatPercent >= 48)   mainHtml = '<span class="title-plain">😐 平凡人</span>';
             else if (beatPercent >= 32.5) mainHtml = '<span class="title-unlucky">🌧️ 小不幸運</span>';
             else                          mainHtml = '<span class="title-bad">🌩️ 小倒霉鬼</span>';
             
-            percentText = `超越 ${beatPercent}% 玩家`;
         } else {
             const p = avgPulls;
             if (p <= 16) mainHtml = '<span class="title-god">✨ 天選之子</span>';
@@ -387,13 +399,12 @@ function updateLuckStats(db = getDB()) {
             else mainHtml = '<span class="title-bad">🌩️ 小倒霉鬼</span>';
         }
 
-        // 將百分比文字以 block 形式與小字體附加於下方，維持與鑽石數大小一致 (11px)
+        percentText = `超越 ${beatPercent}% 玩家`;
         const percentHtml = percentText ? `<span style="display:block; font-size:11px; color:var(--text-sub); font-weight:normal; margin-top:3px;">${percentText}</span>` : '';
         
         return mainHtml + percentHtml;
     }
 
-    // 填充單一卡片的 Helper
     function populateCard(prefix, pulls, targetCount, total5Count, avg, luckHtml, showDiamonds) {
         document.getElementById(`stat${prefix}Pulls`).innerText = pulls;
         const diaEl = document.getElementById(`stat${prefix}Diamonds`);
@@ -434,7 +445,7 @@ function updateLuckStats(db = getDB()) {
     const reAvg = reTargets.length > 0 ? reTargets.reduce((s, r) => s + r.total, 0) / reTargets.length : 0;
     populateCard('Re', rePulls, reTargets.length, dbRe.length, reAvg, getLuckHtml(reAvg, true), true);
 
-    // 4. 自訂副池 (根據下拉選單即時篩選)
+    // 4. 自訂副池
     const subType = document.getElementById('statSubPoolSelect').value;
     const dbSub = db.filter(r => r.sub === subType && (r.main === '限定' || r.main === '復刻'));
     const subPulls = dbSub.reduce((sum, r) => sum + r.pulls, 0);
@@ -535,17 +546,23 @@ function renderUI() {
         else                          { cardTypeStr = '☠️ 歪卡'; statusColor = '#475569'; }
 
         const d       = new Date(r._evTime || r.id);
-        const dateStr = r._evTime && r.main !== '常駐'
-            ? `[${d.getFullYear().toString().slice(2)}/${(d.getMonth() + 1).toString().padStart(2, '0')}]`
-            : '[無期效]';
+        
+        // 修改：常駐池不顯示日期或無期效
+        const dateStr = r.main === '常駐' 
+            ? '' 
+            : (r._evTime ? `[${d.getFullYear().toString().slice(2)}/${(d.getMonth() + 1).toString().padStart(2, '0')}]` : '[無期效]');
+
         const isBlack = r.pulls > 55 && r.pulls <= 62 && r.luck.s <= 1;
+
+        // 修改：常駐池不標示 單人/混池/日卡 標籤
+        const subTagHtml = r.main !== '常駐' ? `<span class="tag tag-lim">${r.sub}</span>` : '';
 
         return `
         <div class="h-record-card">
             <div class="h-bar-bg" style="width: ${Math.min((r.pulls / 70) * 100, 100)}%; background-color: ${r.luck.c};"></div>
             <div class="h-content">
                 <div class="h-left">
-                    <div class="h-tags">${r.main === '復刻' ? '<span class="tag tag-re">復刻</span>' : ''}<span class="tag tag-lim">${r.sub}</span><span class="tag" style="background-color: ${statusColor};">${cardTypeStr}</span></div>
+                    <div class="h-tags">${r.main === '復刻' ? '<span class="tag tag-re">復刻</span>' : ''}${subTagHtml}<span class="tag" style="background-color: ${statusColor};">${cardTypeStr}</span></div>
                     <span class="h-title"><span style="font-size: 15px; font-weight: bold; color: var(--text-main);">${r.card || '未知'}</span><span style="font-size: 12px; font-weight: normal;"> | ${r.banner}</span><span class="h-date">${dateStr}</span></span>
                 </div>
                 <div class="h-right">
