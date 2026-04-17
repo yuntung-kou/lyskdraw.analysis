@@ -1,3 +1,4 @@
+// render.js
 // ════════════════════════════════════════════════════════════
 //  render.js — 主題、主推設定、主渲染函式與初始化
 // ════════════════════════════════════════════════════════════
@@ -77,6 +78,7 @@ function renderUI() {
         r._sortTime       = evTime || r.id;
         r._entryOrder     = r.id;
 
+        // 調用 records.js 中的幸運判定
         if      (r.res === 'target') r.luck = judgeT(r.total);
         else if (r.main === '常駐')  r.luck = judgeS(r.total);
         else                         r.luck = judgeS(r.pulls);
@@ -93,7 +95,8 @@ function renderUI() {
     if (db.length > 0) {
         const targets = db.filter(r => r.res === 'target');
         if (targets.length > 0) {
-            const best = [...targets].sort((a, b) => b.luck.s - a.luck.s || a.total - b.total)[0];
+            // 修正排序：直接以 total (總抽數) 從小到大排序，取第一筆作為巔峰紀錄
+            const best = [...targets].sort((a, b) => a.total - b.total)[0];
             peakHTML += `<div class="peak-item"><span class="peak-label-best">🏆 巔峰紀錄:</span> <span>${
                 best.lead ? (oshis.includes(best.lead) ? '💖' : '') + (leadIcons[best.lead] || '') + best.lead : ''
             } ${best.banner} (${best.total}抽)</span></div>`;
@@ -134,7 +137,8 @@ function renderUI() {
                 ? `[${d.getFullYear().toString().slice(2)}/${(d.getMonth() + 1).toString().padStart(2, '0')}]`
                 : '[無期效]');
 
-        const isBlack    = r.pulls > 55 && r.pulls <= 62 && r.luck.s <= 1;
+        // 修正：移除 luck.s 的判斷，純以抽數區間決定黑底特效
+        const isBlack    = r.pulls > 55 && r.pulls <= 62;
         const subTagHtml = r.main !== '常駐' ? `<span class="tag tag-lim">${r.sub}</span>` : '';
 
         return `
