@@ -56,7 +56,7 @@ body {
 
 .header-section { position: relative; text-align: center; margin-bottom: 25px; }
 h1 { color: var(--title-color); margin: 0; font-size: 24px; }
-.theme-btn { position: absolute; right: 0; top: 7px; background: none; border: none; font-size: 16px; cursor: pointer; padding: 0; }
+.theme-btn { position: absolute; right: 0; top: 10px; background: none; border: none; font-size: 16px; cursor: pointer; padding: 0; }
 p.subtitle { color: var(--text-sub); font-size: 13px; margin: 6px 0 0 0; }
 
 .main-layout { display: flex; flex-direction: column; gap: 25px; }
