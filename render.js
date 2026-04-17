@@ -2,6 +2,15 @@
 //  render.js — 主題、主推設定、主渲染函式與初始化
 // ════════════════════════════════════════════════════════════
 
+// 初始化當前頁數
+window.currentPage = 1;
+
+// 切換頁數的函式 (傳入 1 代表下一頁，-1 代表上一頁)
+window.changePage = function(delta) {
+    window.currentPage += delta;
+    renderUI();
+};
+
 // ── 主題 ──────────────────────────────────────────────────
 function initTheme() {
     const saved = localStorage.getItem('theme') ||
@@ -117,12 +126,29 @@ function renderUI() {
     document.getElementById('peakBoard').innerHTML =
         peakHTML || '<div style="text-align:center;font-size:12px;color:var(--text-sub)">尚無資料</div>';
 
-    // ── 紀錄列表 ──
+    // ── 紀錄列表與分頁 ──
     const filterSelect = document.getElementById('recordFilterSelect');
     const filterVal    = filterSelect ? filterSelect.value : '全部';
     const displayDb    = filterVal !== '全部' ? db.filter(r => r.main === filterVal) : db;
 
-    document.getElementById('recordList').innerHTML = displayDb.map(r => {
+    // 分頁邏輯設定 (一頁 10 筆)
+    const itemsPerPage = 10;
+    // 計算總頁數，Math.ceil 是無條件進位 (例如 11 筆資料 / 10 = 1.1，進位成 2 頁)
+    const totalPages = Math.max(1, Math.ceil(displayDb.length / itemsPerPage));
+    
+    // 安全機制：確保目前頁數不會超出合理範圍 (例如刪除最後一頁的資料時，會自動往前縮一頁)
+    if (window.currentPage > totalPages) {
+        window.currentPage = totalPages;
+    } else if (window.currentPage < 1) {
+        window.currentPage = 1;
+    }
+
+    // 計算這頁要從第幾筆開始抓 (類似 C++ 陣列的 Index 計算)
+    const startIndex = (window.currentPage - 1) * itemsPerPage;
+    // array.slice 會切出一小段新陣列給我們渲染
+    const paginatedDb = displayDb.slice(startIndex, startIndex + itemsPerPage);
+
+    document.getElementById('recordList').innerHTML = paginatedDb.map(r => {
         let cardTypeStr, statusColor;
         if      (r.main === '常駐')   { cardTypeStr = '🎫 常駐'; statusColor = '#3b82f6'; }
         else if (r.res === 'target')  { cardTypeStr = '🎯 限定'; statusColor = 'var(--primary)'; }
@@ -136,7 +162,6 @@ function renderUI() {
                 ? `[${d.getFullYear().toString().slice(2)}/${(d.getMonth() + 1).toString().padStart(2, '0')}]`
                 : '[無期效]');
 
-        // 修正：移除 luck.s 的判斷，純以抽數區間決定黑底特效
         const isBlack    = r.pulls > 55 && r.pulls <= 62;
         const subTagHtml = r.main !== '常駐' ? `<span class="tag tag-lim">${r.sub}</span>` : '';
 
@@ -160,6 +185,21 @@ function renderUI() {
             </div>
         </div>`;
     }).join('');
+
+    // 算繪下方的分頁按鈕
+    const paginationEl = document.getElementById('paginationControls');
+    if (paginationEl) {
+        // 只有資料超過 1 頁 (大於 10 筆) 時才顯示按鈕
+        if (displayDb.length > itemsPerPage) {
+            paginationEl.innerHTML = `
+                <button class="page-btn" onclick="changePage(-1)" ${window.currentPage === 1 ? 'disabled' : ''}>◀ 上一頁</button>
+                <span class="page-info">第 ${window.currentPage} / ${totalPages} 頁</span>
+                <button class="page-btn" onclick="changePage(1)" ${window.currentPage === totalPages ? 'disabled' : ''}>下一頁 ▶</button>
+            `;
+        } else {
+            paginationEl.innerHTML = '';
+        }
+    }
 }
 
 // ── 啟動 ───────────────────────────────────────────────────
