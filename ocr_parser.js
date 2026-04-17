@@ -1,31 +1,7 @@
 // ═══════════════════════════════════════════════════════════
-//  ocr_parser.js — 智慧行合併 + 特徵防丟失版 (v24 卡池名稱修復版)
+//  ocr_parser.js — 智慧行合併 + 特徵防丟失版 (v25 雙常駐自動判定版)
 // ═══════════════════════════════════════════════════════════
 
-// ── 常駐卡池名稱辨識表 ────────────────────────────────────────
-// 只有常駐卡池需要靠卡池名稱來切換；限定/復刻池已有卡名反查機制
-// 左側列出 OCR 可能辨識到的各種寫法（含常見錯字）
-const KNOWN_POOL_NAMES = [
-    { patterns: ['極空迴響', '極空回響', '極空迴音', '極空回音'], key: '常駐' },
-];
-
-/**
- * 從已合併的 OCR rows 中掃描卡池名稱。
- * 在嚴格過濾（parseOCRLines）之前呼叫，避免卡池行被跳過。
- */
-function detectPoolName(rows) {
-    for (const row of rows) {
-        const t = row.text.replace(/\s+/g, '');
-        for (const pool of KNOWN_POOL_NAMES) {
-            if (pool.patterns.some(p => t.includes(p))) {
-                return pool.key;
-            }
-        }
-    }
-    return null;
-}
-
-// ── handleOCR ────────────────────────────────────────────────
 async function handleOCR(event) {
     const files = event.target.files;
     if (!files || files.length === 0) return;
@@ -35,13 +11,12 @@ async function handleOCR(event) {
 
     try {
         let pages = []; let warnings = [];
-        let detectedPoolName = null; // ← 新增：收集卡池名稱
+        let detectedPoolName = null; 
 
         for (let i = 0; i < files.length; i++) {
             statusEl.innerText = `⏳ 辨識中... (${i + 1}/${files.length})`;
-            const { records, poolName } = await extractRecordsFromImage(files[i]); // ← 解構新回傳值
+            const { records, poolName } = await extractRecordsFromImage(files[i]);
 
-            // 只要任一頁有辨識到卡池名，就採用（優先用第一張）
             if (poolName && !detectedPoolName) detectedPoolName = poolName;
 
             if (records.length < 5) warnings.push(`第 ${i + 1} 張僅讀取到 ${records.length} 筆`);
@@ -61,20 +36,33 @@ async function handleOCR(event) {
             const targetGold = result.pullEvents[result.pullEvents.length - 1];
             const pendingPulls = result.pendingPulls;
 
+            // ── 新增：判定連續兩次五星是否皆為常駐 ──
+            let finalPoolName = detectedPoolName;
+            
+            // 檢查卡片是否在 standardCards 名單中
+            const isStandard = (name) => {
+                if (!name || typeof standardCards === 'undefined') return false;
+                return Object.values(standardCards).some(list => list.includes(name));
+            };
+
+            // 如果「這次抽到的」跟「前一次抽到的」都是常駐卡，強制判定為常駐池
+            if (isStandard(targetGold.name) && isStandard(targetGold.prevName)) {
+                finalPoolName = '常駐';
+            }
+
             if (typeof window.autoFillFromOCR === 'function') {
-                // ← 第 6 個參數新增 detectedPoolName，app.js 接到後可自動切換卡池選項
                 window.autoFillFromOCR(
                     targetGold.pulls,
                     targetGold.name,
                     targetGold.time,
                     pendingPulls,
                     targetGold.raw,
-                    detectedPoolName   // ★ 新增
+                    finalPoolName
                 );
             }
 
             let resText = `✅ 辨識完成！`;
-            if (detectedPoolName) resText += `（${detectedPoolName}）`;
+            if (finalPoolName) resText += `（${finalPoolName}）`;
             resText += `\n\n`;
             [...result.pullEvents].reverse().forEach(evt => { resText += `${evt.name}：${evt.pulls} 抽\n`; });
             if (pendingPulls > 0) resText += `\n💡 偵測到出金後已墊 ${pendingPulls} 抽`;
@@ -125,14 +113,12 @@ async function extractRecordsFromImage(file) {
     }
     rows.sort((a, b) => a.yCenter - b.yCenter);
 
-    // ★ 在嚴格過濾前先掃卡池名稱（卡池那行不含角色名/星數/日期，舊版會被跳過）
     const poolName = detectPoolName(rows);
-
     const records = parseOCRLines(rows, colorCanvas, cropTop);
-    return { records, poolName }; // ← 改為回傳物件
+    return { records, poolName };
 }
 
-// ── detectStarFromColor（不變）────────────────────────────────
+// ── detectStarFromColor ──────────────────────────────────────
 function detectStarFromColor(colorCanvas, bbox, cropTop) {
     const y0 = Math.max(0, bbox.y0 + cropTop);
     const h = bbox.y1 - bbox.y0;
@@ -151,7 +137,7 @@ function detectStarFromColor(colorCanvas, bbox, cropTop) {
     return 3;
 }
 
-// ── parseOCRLines（不變）─────────────────────────────────────
+// ── parseOCRLines ───────────────────────────────────────────
 function parseOCRLines(rows, colorCanvas, cropTop) {
     const records = [];
     let known = [];
@@ -210,7 +196,7 @@ function parseOCRLines(rows, colorCanvas, cropTop) {
 
 const VARIANT_CHARS = { '溫': '温', '繾': '缱', '綣': '绻', '晝': '昼', '跡': '迹', '戀': '恋' };
 
-// ── fileToCanvas（不變）──────────────────────────────────────
+// ── fileToCanvas ────────────────────────────────────────────
 function fileToCanvas(file) {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -226,13 +212,20 @@ function fileToCanvas(file) {
     });
 }
 
-// ── countPulls（不變）────────────────────────────────────────
+// ── countPulls ──────────────────────────────────────────────
 function countPulls(records) {
     const pos = records.map((r, i) => ({ ...r, i })).filter(r => r.star === 5);
     const pendingPulls = pos.length > 0 ? pos[0].i : records.length; 
     if (pos.length < 2) return { pullEvents: [], fiveStarCount: pos.length, pendingPulls, pos };
+    
     return { 
-        pullEvents: pos.slice(0, -1).map((c, i) => ({ name: c.name, pulls: pos[i+1].i - c.i, time: c.time, raw: c.raw })), 
+        pullEvents: pos.slice(0, -1).map((c, i) => ({ 
+            name: c.name, 
+            pulls: pos[i+1].i - c.i, 
+            time: c.time, 
+            raw: c.raw,
+            prevName: pos[i+1].name // ★ 新增：紀錄前一張五星名稱，供 handleOCR 判定
+        })), 
         fiveStarCount: pos.length, pendingPulls, pos 
     };
 }
