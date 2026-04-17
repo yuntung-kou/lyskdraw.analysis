@@ -157,3 +157,34 @@ input[type="radio"], input[type="checkbox"] { width: 16px; height: 16px; margin:
 .sub-stat-label { font-size: 10px; color: var(--text-sub); margin-top: 2px; }
 
 .card-select { background-color: transparent; border: none; color: var(--text-sub); font-weight: bold; font-size: 12px; outline: none; cursor: pointer; text-align: center; padding: 0; appearance: auto; }
+
+/* ════ 分頁按鈕樣式 ════ */
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-top: 15px;
+    font-size: 13px;
+}
+.page-btn {
+    background-color: var(--input-bg);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.page-btn:hover:not(:disabled) {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+.page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.page-info {
+    color: var(--text-sub);
+    font-weight: bold;
+}
