@@ -56,7 +56,7 @@ body {
 
 .header-section { position: relative; text-align: center; margin-bottom: 25px; }
 h1 { color: var(--title-color); margin: 0; font-size: 24px; }
-.theme-btn { position: absolute; right: 0; top: 0; background: none; border: none; font-size: 20px; cursor: pointer; padding: 0; }
+.theme-btn { position: absolute; right: 0; top: 3px; background: none; border: none; font-size: 16px; cursor: pointer; padding: 0; }
 p.subtitle { color: var(--text-sub); font-size: 13px; margin: 6px 0 0 0; }
 
 .main-layout { display: flex; flex-direction: column; gap: 25px; }
@@ -188,3 +188,7 @@ input[type="radio"], input[type="checkbox"] { width: 16px; height: 16px; margin:
     color: var(--text-sub);
     font-weight: bold;
 }
+
+/* 新增：強制男主按鈕在手機端保持同一排並平均分配空間 */
+.lead-radio-group { flex-wrap: nowrap !important; gap: 4px; width: 100%; justify-content: space-between; }
+.lead-radio-group .radio-label { padding: 6px 2px; flex: 1; justify-content: center; gap: 4px; }
