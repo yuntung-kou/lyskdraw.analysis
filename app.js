@@ -73,9 +73,9 @@ function updateBannerRecommendations() {
     
     if (mainPool === '常駐') {
         if(subPoolGroup) subPoolGroup.style.opacity = '0.3';
-        dropdownData.bannerName = ['極空迴音'];
+        dropdownData.bannerName = ['極空迴響'];
         dropdownData.upCardName = typeof standardCards !== 'undefined' ? [...new Set(Object.values(standardCards).flat())] : [];
-        document.getElementById('bannerName').value = '極空迴音';
+        document.getElementById('bannerName').value = '極空迴響';
         return;
     }
     
