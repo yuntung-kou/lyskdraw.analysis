@@ -187,7 +187,7 @@ window.updatePulledCardList = function () {
     if (typeof standardCards !== 'undefined' && standardCards[pulledLead])
         options.push(...standardCards[pulledLead]);
     dropdownData.cardName = [...new Set(options)];
-};
+}
 
 // ── 自動填入：OCR 辨識結果 ────────────────────────────────
 window.autoFillFromOCR = function (pulls, cardName, latestTime, pendingPulls, rawText = '', poolName = null) {
@@ -198,6 +198,12 @@ window.autoFillFromOCR = function (pulls, cardName, latestTime, pendingPulls, ra
 
     let foundLead = findTrueLead(cardName);
     let matchedEvent = null;
+
+    // 【修正點】：在常駐池提早 return 之前，先把男主選好
+    if (foundLead) {
+        const radio = document.querySelector(`input[name="pulledLead"][value="${foundLead}"]`);
+        if (radio) radio.checked = true;
+    }
 
     if (poolName === '常駐') {
         document.querySelector(`input[name="mainPool"][value="常駐"]`).checked = true;
@@ -221,18 +227,19 @@ window.autoFillFromOCR = function (pulls, cardName, latestTime, pendingPulls, ra
     if (matchedEvent) {
         const isRerun = matchedEvent.poolType.includes('復刻');
         document.querySelector(`input[name="mainPool"][value="${isRerun ? '復刻' : '限定'}"]`).checked = true;
-        setSubPoolFromEvent(matchedEvent); // ← 共用 helper
+        setSubPoolFromEvent(matchedEvent); 
         document.getElementById('bannerName').value = matchedEvent.eventName;
     }
 
+    // 備用邏輯：如果前面沒找到，從 eventCards 再次確認
     if (!foundLead && matchedEvent) {
         for (const lead in matchedEvent.cards) {
             if (matchedEvent.cards[lead].includes(cardName)) { foundLead = lead; break; }
         }
-    }
-    if (foundLead) {
-        const radio = document.querySelector(`input[name="pulledLead"][value="${foundLead}"]`);
-        if (radio) radio.checked = true;
+        if (foundLead) {
+            const radio = document.querySelector(`input[name="pulledLead"][value="${foundLead}"]`);
+            if (radio) radio.checked = true;
+        }
     }
 
     const mainPoolValue = document.querySelector('input[name="mainPool"]:checked').value;
