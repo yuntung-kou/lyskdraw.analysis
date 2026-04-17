@@ -184,11 +184,22 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<!-- 靜態資料：必須最先載入，ocr_parser.js 的 KNOWN_CARDS 和 pool-logic.js 的 cardToLeadMap 都依賴這兩個檔案 -->
 <script src="love_and_deepspace_events.js"></script>
 <script src="love_and_deepspace_standard.js"></script>
+
+<!-- OCR 辨識核心：依賴上方靜態資料 -->
 <script src="ocr_parser.js"></script>
+
+<!-- 幸運機率表：records.js 的 getLuckHtml 依賴 beatPercentTable -->
 <script src="luck_data.js"></script>
-<script src="app.js"></script>
+
+<!-- 應用程式主體：依序載入，後者依賴前者 -->
+<script src="storage.js"></script>
+<script src="pool-logic.js"></script>
+<script src="records.js"></script>
+<script src="render.js"></script>
 
 </body>
 </html>
