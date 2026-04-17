@@ -2,6 +2,7 @@
 //  ocr_parser.js — 智慧行合併 + 特徵防丟失版 (v25 雙常駐自動判定版)
 // ═══════════════════════════════════════════════════════════
 
+// 替換原有的 handleOCR 函式
 async function handleOCR(event) {
     const files = event.target.files;
     if (!files || files.length === 0) return;
@@ -11,13 +12,11 @@ async function handleOCR(event) {
 
     try {
         let pages = []; let warnings = [];
-        let detectedPoolName = null; 
 
         for (let i = 0; i < files.length; i++) {
             statusEl.innerText = `⏳ 辨識中... (${i + 1}/${files.length})`;
-            const { records, poolName } = await extractRecordsFromImage(files[i]);
-
-            if (poolName && !detectedPoolName) detectedPoolName = poolName;
+            // 💡 修改：不再接收 poolName，直接等待 records 回傳
+            const records = await extractRecordsFromImage(files[i]);
 
             if (records.length < 5) warnings.push(`第 ${i + 1} 張僅讀取到 ${records.length} 筆`);
             if (records.length > 0) {
@@ -36,16 +35,15 @@ async function handleOCR(event) {
             const targetGold = result.pullEvents[result.pullEvents.length - 1];
             const pendingPulls = result.pendingPulls;
 
-            // ── 新增：判定連續兩次五星是否皆為常駐 ──
-            let finalPoolName = detectedPoolName;
+            // 💡 修改：直接預設為 null，只依賴雙常駐判定
+            let finalPoolName = null;
             
-            // 檢查卡片是否在 standardCards 名單中
             const isStandard = (name) => {
                 if (!name || typeof standardCards === 'undefined') return false;
                 return Object.values(standardCards).some(list => list.includes(name));
             };
 
-            // 如果「這次抽到的」跟「前一次抽到的」都是常駐卡，強制判定為常駐池
+            // 判定連續兩次五星是否皆為常駐
             if (isStandard(targetGold.name) && isStandard(targetGold.prevName)) {
                 finalPoolName = '常駐';
             }
@@ -75,7 +73,7 @@ async function handleOCR(event) {
     } catch (err) { statusEl.innerText = '❌ 失敗：' + (err.message || '未知'); statusEl.style.color = '#ef4444'; }
 }
 
-// ── extractRecordsFromImage ──────────────────────────────────
+// 替換原有的 extractRecordsFromImage 函式
 async function extractRecordsFromImage(file) {
     const colorCanvas = await fileToCanvas(file);
     const { width, height } = colorCanvas;
@@ -113,9 +111,8 @@ async function extractRecordsFromImage(file) {
     }
     rows.sort((a, b) => a.yCenter - b.yCenter);
 
-    const poolName = detectPoolName(rows);
-    const records = parseOCRLines(rows, colorCanvas, cropTop);
-    return { records, poolName };
+    // 💡 修改：移除了 poolName 的偵測，直接回傳清理過的 records
+    return parseOCRLines(rows, colorCanvas, cropTop);
 }
 
 // ── detectStarFromColor ──────────────────────────────────────
